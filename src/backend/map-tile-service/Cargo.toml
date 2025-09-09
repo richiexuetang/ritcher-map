@@ -1,0 +1,33 @@
+[package]
+name = "map-tile-service"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4.11.0"
+actix-cors = "0.7.1"
+tokio = { version = "1.47.1", features = ["full"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.143"
+image = "0.25.6"
+imageproc = "0.25.0"
+redis = { version = "0.32.5", features = ["tokio-comp", "connection-manager"] }
+aws-sdk-s3 = "1.103.0"
+aws-config = "1.8.5"
+env_logger = "0.11.8"
+log = "0.4.27"
+config = "0.15.14"
+thiserror = "2.0.16"
+bytes = "1.10.1"
+futures = "0.3.31"
+lru = "0.16.0"
+sha2 = "0.10.9"
+hex = "0.4.3"
+rayon = "1.11.0"
+webp = "0.3.0"
+prometheus = { version = "0.14.0", features = ["process"] }
+lazy_static = "1.5.0"
+uuid = { version = "1.18.0", features = ["v4", "serde"] }
+chrono = "0.4.41"
+anyhow = "1.0.99"
+reqwest = "0.12.23"

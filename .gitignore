@@ -217,21 +217,13 @@ ModelManifest.xml
 Images/
 *.idea/
 *.a
-src/backend/services/go/src/basket.api/main
-src/backend/services/go/pkg
 src/backend/web/web.admin/dashboard/package-lock.json
 **/.idea
 
 *.sonarqube
-src/backend/services/basket.api/basket.api
 src/backend/.gradle
-src/backend/services/menu.api/menu-api-release
-src/backend/services/identity.api/identity-api-release
-src/backend/services/catalog-api/target
 src/backend/web/web.admin/dashboard/.angular
 src/backend/docker/.data
-src/backend/services/basket-api/basket-api
-src/backend/services/.DS_Store
 src/backend/docker/.env
 src/backend/target
 *k6
