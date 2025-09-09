@@ -228,4 +228,4 @@ src/backend/docker/.env
 src/backend/target
 *k6
 
-target/
+**/target/
