@@ -164,7 +164,7 @@ impl TileService {
                 img.write_to(&mut std::io::Cursor::new(&mut buffer), ImageFormat::Png)?;
             }
             TileFormat::JPEG => {
-                let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(
+                let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(
                     &mut buffer,
                     quality,
                 );
@@ -221,7 +221,7 @@ impl TileService {
     async fn save_metadata(&self, metadata: &TileMetadata) -> Result<(), TileError> {
         let key = format!("{}/metadata.json", metadata.map_id);
         let data = serde_json::to_vec(metadata)
-            .map_err(|e| TileError::InternalError)?;
+            .map_err(|_e| TileError::InternalError)?;
         self.storage.put(&key, &Bytes::from(data)).await?;
         Ok(())
     }

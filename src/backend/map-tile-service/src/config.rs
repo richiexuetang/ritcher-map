@@ -52,7 +52,7 @@ impl Config {
             },
             s3: S3Config {
                 bucket: env::var("S3_BUCKET").unwrap_or_else(|_| "map-tiles".to_string()),
-                region: env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string()),
+                region: env::var("AWS_REGION").unwrap_or_else(|_| "us-west-1".to_string()),
                 endpoint: env::var("S3_ENDPOINT").ok(),
             },
             tile: TileConfig {

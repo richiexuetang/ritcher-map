@@ -30,7 +30,7 @@ impl CacheService {
 
     pub async fn set(&self, key: &str, value: &Bytes, ttl: u64) -> Result<(), TileError> {
         let mut conn = self.conn.clone();
-        conn.set_ex(key, value.to_vec(), ttl)
+        conn.set_ex::<_, _, ()>(key, value.to_vec(), ttl)
             .await
             .map_err(|e| TileError::CacheError(e.to_string()))?;
         Ok(())
@@ -44,7 +44,7 @@ impl CacheService {
             .map_err(|e| TileError::CacheError(e.to_string()))?;
 
         if !keys.is_empty() {
-            conn.del(keys)
+            conn.del::<_, ()>(keys)
                 .await
                 .map_err(|e| TileError::CacheError(e.to_string()))?;
         }
