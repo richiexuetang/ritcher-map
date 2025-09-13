@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -9,9 +8,9 @@ import os
 from datetime import datetime, timedelta
 import logging
 
-from ...app.core.config import settings
-from ...app.core.elasticsearch import get_elasticsearch
-from ...app.services.cache_service import CacheService
+from ..core.config import settings
+from ..core.elasticsearch import get_elasticsearch
+from .cache_service import CacheService
 
 logger = logging.getLogger(__name__)
 

@@ -1,14 +1,14 @@
 from typing import List, Dict, Any, Optional
 from elasticsearch import AsyncElasticsearch
-from ...app.models.search import (
+from ..models.search import (
     SearchRequest, SearchResponse, SearchHit,
     SearchType, SortOrder, SearchFilter
 )
-from ...app.core.elasticsearch import get_elasticsearch
-from ...app.core.config import settings
-from ...app.utils.text_processing import TextProcessor
-from ...app.services.analytics_service import AnalyticsService
-from ...app.services.cache_service import CacheService
+from ..core.elasticsearch import get_elasticsearch
+from ..core.config import settings
+from ..utils.text_processing import TextProcessor
+from .analytics_service import AnalyticsService
+from .cache_service import CacheService
 import time
 import logging
 

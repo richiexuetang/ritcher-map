@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, Request
 from typing import List, Optional
-from ....app.models.search import (
+from ...models.search import (
     SearchRequest, SearchResponse, SearchType, SortOrder, SearchFilter
 )
-from ....app.services.search_service import search_service
+from ...services.search_service import search_service
 # from ....app.core.security import get_current_user_optional
 import logging
 

@@ -1,8 +1,8 @@
-import aioredis
-from typing import Optional, Any, Union
+import redis
+from typing import Optional, Any
 import json
 import pickle
-from config import settings
+from .config import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -10,11 +10,11 @@ logger = logging.getLogger(__name__)
 
 class RedisClient:
     def __init__(self):
-        self.client: Optional[aioredis.Redis] = None
+        self.client: Optional[redis.Redis] = None
 
     async def connect(self):
         """Initialize Redis connection"""
-        self.client = aioredis.from_url(
+        self.client = redis.from_url(
             settings.REDIS_URL,
             encoding="utf-8",
             decode_responses=False  # We handle encoding manually

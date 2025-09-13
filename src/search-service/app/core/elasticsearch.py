@@ -1,17 +1,17 @@
-from elasticsearch import AsyncElasticSearch
+from elasticsearch import AsyncElasticsearch
 from typing import Optional
 import logging
-from config import settings
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class ElasticSearchClient:
     def __init__(self):
-        self.client: Optional[AsyncElasticSearch] = None
+        self.client: Optional[AsyncElasticsearch] = None
 
     async def connect(self):
-        self.client = AsyncElasticSearch(
+        self.client = AsyncElasticsearch(
             hosts=[settings.ELASTICSEARCH_URL],
             timeout=30,
             max_retries=3,

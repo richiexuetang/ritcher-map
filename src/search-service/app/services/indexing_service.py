@@ -4,10 +4,10 @@ from typing import List, Dict, Any
 from datetime import datetime
 import logging
 
-from ...app.core.elasticsearch import get_elasticsearch
-from ...app.core.config import settings
-from ...app.core.redis import redis_client
-from ...app.utils.text_processing import TextProcessor
+from ..core.elasticsearch import get_elasticsearch
+from ..core.config import settings
+from ..core.redis import redis_client
+from ..utils.text_processing import TextProcessor
 
 logger = logging.getLogger(__name__)
 

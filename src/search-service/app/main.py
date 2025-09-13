@@ -10,7 +10,6 @@ from .core.config import settings
 from .core.elasticsearch import es_client
 from .core.redis import redis_client
 from .api.v1 import search
-# suggestions, trending, index as index_router)
 from .services.recommendation_service import recommendation_service
 
 # Configure logging
@@ -34,7 +33,7 @@ async def lifespan(app: FastAPI):
         await es_client.create_indices()
 
         # Connect to Redis
-        await redis_client.connect()
+        redis_client.connect()
 
         # Load/train ML models
         await recommendation_service.retrain_models_if_needed()
@@ -96,8 +95,7 @@ app.include_router(
     prefix=settings.API_V1_PREFIX,
     tags=["search"]
 )
-
-
+# 
 # app.include_router(
 #     suggestions.router,
 #     prefix=settings.API_V1_PREFIX,

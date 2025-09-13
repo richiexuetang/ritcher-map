@@ -3,14 +3,14 @@ from datetime import datetime, timedelta
 import hashlib
 import logging
 
-from ...app.core.elasticsearch import get_elasticsearch
-from ...app.core.config import settings
-from ...app.core.redis import redis_client
-from ...app.models.analytics import (
+from ..core.elasticsearch import get_elasticsearch
+from ..core.config import settings
+from ..core.redis import redis_client
+from ..models.analytics import (
     SearchAnalyticsEvent, ClickAnalyticsEvent,
     SearchMetrics, QueryPerformance
 )
-from ...app.utils.text_processing import TextProcessor
+from ..utils.text_processing import TextProcessor
 
 logger = logging.getLogger(__name__)
 

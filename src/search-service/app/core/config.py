@@ -1,12 +1,12 @@
 from functools import lru_cache
-from typing import List, Optional
+from typing import List, Optional, ClassVar
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     APP_NAME: str = "Ritcher Map Search Service"
     APP_VERSION: str = "1.0.0"
-    API_V1_PREFIX = "/api/v1"
+    API_V1_PREFIX: ClassVar[str] = "/api/v1"
     DEBUG: bool = False
 
     HOST: str = "0.0.0.0"
@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    ELASTIC_SEARCH_URL: str = "http://localhost:9200"
+    ELASTICSEARCH_URL: str = "http://localhost:9200"
     ELASTICSEARCH_INDEX_PREFIX: str = "ritchermap"
     ELASTICSEARCH_MAX_RESULT_WINDOW: int = 10000
 

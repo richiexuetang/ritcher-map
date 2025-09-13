@@ -1,0 +1,33 @@
+# ==============================================================================
+# Version Control
+# ==============================================================================
+.git
+.gitignore
+.gitattributes
+.gitmodules
+.hg
+.svn
+.bzr
+CVS
+
+# ==============================================================================
+# Documentation & README files
+# ==============================================================================
+README.md
+README.rst
+CHANGELOG.md
+CHANGELOG.rst
+LICENSE
+LICENSE.txt
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+*.md
+*.rst
+
+# ==============================================================================
+# Docker related files (don't copy Docker files into the image)
+# ==============================================================================
+Dockerfile*
+.dockerignore
+docker-compose*.yml

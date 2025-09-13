@@ -2,9 +2,9 @@ from typing import Any, Optional, List, Dict
 import hashlib
 import logging
 
-from ...app.core.redis import redis_client
-from ...app.core.config import settings
-from ...app.utils.cache_keys import CacheKeyBuilder
+from ..core.redis import redis_client
+from ..core.config import settings
+from ..utils.cache_keys import CacheKeyBuilder
 
 logger = logging.getLogger(__name__)
 
