@@ -1,0 +1,5 @@
+package `import`
+
+class Main {
+
+}
