@@ -1,0 +1,58 @@
+[package]
+name = "map-tile-service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Web Framework
+actix-web = "4.4"
+actix-cors = "0.7.1"
+actix-files = "0.6"
+actix-web-prometheus = "0.1"
+
+# Async Runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# Database
+sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
+redis = { version = "0.32.5", features = ["tokio-comp", "connection-manager"] }
+
+# Image Processing
+image = { version = "0.25.8", features = ["png", "jpeg", "webp"] }
+imageproc = "0.23"
+fast_image_resize = "2.7"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "2.0.1"
+
+# Configuration
+config = "0.15.15"
+toml = "0.8"
+
+# Logging & Metrics
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+prometheus = "0.14.0"
+
+# Utilities
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+thiserror = "2.0.16"
+bytes = "1.5"
+base64 = "0.22.1"
+lazy_static = "1.4"
+
+# HTTP Client
+reqwest = { version = "0.12.23", features = ["json"] }
+
+# Geospatial
+geo = "0.31.0"
+geo-types = "0.7"
+
+[dev-dependencies]
+actix-rt = "2.9"
+tokio-test = "0.4"
+tempfile = "3.8"
