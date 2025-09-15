@@ -1,5 +1,0 @@
-package `import`
-
-class Main {
-
-}

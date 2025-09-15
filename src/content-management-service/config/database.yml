@@ -1,3 +1,0 @@
-default: &default
-  adapter: postgres
-  encoding: unicode

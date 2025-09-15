@@ -1,0 +1,185 @@
+syntax = "proto3";
+
+package realtime;
+
+option go_package = "github.com/ritchermap/realtime/internal/proto";
+
+import "google/protobuf/timestamp.proto";
+
+enum MessageType {
+  UNKNOWN = 0;
+  // Connection events
+  CONNECTION_ESTABLISHED = 1;
+  CONNECTION_CLOSED = 2;
+
+  // Marker events
+  MARKER_CREATED = 10;
+  MARKER_UPDATED = 11;
+  MARKER_DELETED = 12;
+  MARKER_BULK_UPDATE = 13;
+
+  // Presence events
+  USER_JOINED = 20;
+  USER_LEFT = 21;
+  USER_LOCATION_UPDATE = 22;
+  USER_STATUS_UPDATE = 23;
+
+  // Collaboration events
+  COLLABORATION_SYNC = 30;
+  COLLABORATION_CURSOR = 31;
+  COLLABORATION_SELECTION = 32;
+
+  // System events
+  PING = 90;
+  PONG = 91;
+  ERROR = 99;
+}
+
+// Base message structure
+message RealtimeMessage {
+  string id = 1;
+  MessageType type = 2;
+  string game_id = 3;
+  string user_id = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  bytes payload = 6;
+  map<string, string> metadata = 7;
+}
+
+// Position coordinates
+message Position {
+  double latitude = 1;
+  double longitude = 2;
+  double altitude = 3;
+}
+
+// Marker events
+message MarkerCreatedEvent {
+  string marker_id = 1;
+  string game_id = 2;
+  string category_id = 3;
+  Position position = 4;
+  string title = 5;
+  string description = 6;
+  map<string, string> metadata = 7;
+  int32 visibility_level = 8;
+  string created_by = 9;
+}
+
+message MarkerUpdatedEvent {
+  string marker_id = 1;
+  string game_id = 2;
+  Position old_position = 3;
+  Position new_position = 4;
+  string old_title = 5;
+  string new_title = 6;
+  map<string, string> changes = 7;
+  string updated_by = 8;
+  int32 version = 9;
+}
+
+message MarkerDeletedEvent {
+  string marker_id = 1;
+  string game_id = 2;
+  string deleted_by = 3;
+  string reason = 4;
+}
+
+// Presence events
+message UserJoinedEvent {
+  string user_id = 1;
+  string username = 2;
+  string game_id = 3;
+  Position initial_location = 4;
+  UserStatus status = 5;
+  map<string, string> metadata = 6;
+}
+
+message UserLeftEvent {
+  string user_id = 1;
+  string game_id = 2;
+  string reason = 3;
+}
+
+message UserLocationUpdateEvent {
+  string user_id = 1;
+  string game_id = 2;
+  Position position = 3;
+  double heading = 4;
+  double speed = 5;
+  google.protobuf.Timestamp timestamp = 6;
+}
+
+message UserStatusUpdateEvent {
+  string user_id = 1;
+  string game_id = 2;
+  UserStatus status = 3;
+  string custom_status = 4;
+}
+
+enum UserStatus {
+  UNKNOWN_STATUS = 0;
+  ONLINE = 1;
+  AWAY = 2;
+  BUSY = 3;
+  INVISIBLE = 4;
+  OFFLINE = 5;
+}
+
+// Collaboration events
+message CollaborationSyncEvent {
+  string session_id = 1;
+  string user_id = 2;
+  string resource_type = 3; // marker, guide, etc.
+  string resource_id = 4;
+  string operation = 5; // insert, delete, retain
+  bytes data = 6;
+  int64 revision = 7;
+}
+
+message CollaborationCursorEvent {
+  string session_id = 1;
+  string user_id = 2;
+  string resource_id = 3;
+  int32 position = 4;
+  string selection_start = 5;
+  string selection_end = 6;
+}
+
+// System events
+message PingEvent {
+  google.protobuf.Timestamp timestamp = 1;
+}
+
+message PongEvent {
+  google.protobuf.Timestamp timestamp = 1;
+  google.protobuf.Timestamp ping_timestamp = 2;
+}
+
+message ErrorEvent {
+  string code = 1;
+  string message = 2;
+  string details = 3;
+  bool recoverable = 4;
+}
+
+// Connection info
+message ConnectionInfo {
+  string connection_id = 1;
+  string user_id = 2;
+  string game_id = 3;
+  google.protobuf.Timestamp connected_at = 4;
+  string client_ip = 5;
+  string user_agent = 6;
+  map<string, string> metadata = 7;
+}
+
+// Room info
+message RoomInfo {
+  string room_id = 1;
+  string game_id = 2;
+  repeated string connected_users = 3;
+  int32 connection_count = 4;
+  google.protobuf.Timestamp created_at = 5;
+  map<string, string> metadata = 6;
+}
