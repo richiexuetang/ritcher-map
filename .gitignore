@@ -232,3 +232,87 @@ src/backend/target
 init-scripts
 _build
 deps
+
+# Ignore bundler config
+.bundle
+
+# Ignore the default SQLite database.
+/db/*.sqlite3
+/db/*.sqlite3-journal
+
+# Ignore all logfiles and tempfiles.
+/log/*.log
+/tmp/
+
+# Ignore Byebug command history file.
+.byebug_history
+
+# Ignore Rubymine specific files
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/shelf/
+
+# Ignore local environment variables and sensitive configurations
+config/application.yml
+config/secrets.yml
+config/database.yml # If you have local database configurations that differ from the shared template
+
+# Ignore coverage reports from testing
+/coverage/
+
+# Ignore compiled assets
+/public/assets/
+/public/packs/
+/public/packs-test/
+
+# Ignore node modules if using JavaScript in conjunction with Ruby
+/node_modules/
+
+# Ignore generated documentation
+/doc/
+
+
+# Vendor directory
+/vendor/
+
+# Configuration files
+config.php
+.env
+
+# Log files
+/logs/
+
+# Cache and temporary files
+/cache/
+
+# IDE and editor-specific files
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Operating system-specific files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+/build/
+/dist/
+
+# Compiled artifacts
+_build/
+priv/static/
+deps/
+
+# Editor/OS specific files
+*.swp
+*.dump
+
+# ElixirLS specific files
+.elixir_ls/
+
+# Coverage reports
+cover/
+
+# Archive artifacts (if built via "mix archive.build")
+*.ez

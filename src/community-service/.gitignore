@@ -1,1 +1,35 @@
-vendor
+# Vendor directory for Composer dependencies
+/vendor/
+
+# Environment variables and configuration files
+.env
+.env.local
+.env.*.local
+config.php # Or other specific configuration files
+
+# Log files
+*.log
+/logs/
+
+# Cache directories
+/cache/
+/tmp/
+
+# IDE and editor specific files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.DS_Store # macOS specific
+Thumbs.db # Windows specific
+
+# Build artifacts and compiled files
+/build/
+/dist/
+
+# Test reports
+/coverage/
+
+# Specific framework related ignores (e.g., Laravel)
+/bootstrap/cache/
+/storage/

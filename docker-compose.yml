@@ -1,0 +1,131 @@
+services:
+  content-management-service:
+    build: src/content-management-service
+    ports:
+      - "3000:3000"
+
+  map-tile-service:
+    build: src/map-tile-service
+
+  community-service:
+    build: src/community-service
+    environment:
+      - APP_ENV=local
+      - DB_HOST=mysql
+      - REDIS_HOST=redis
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - ritchermap-network
+
+  search-service:
+    build: src/search-service
+    ports: 
+      - "8000:8000"
+    environment: 
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - REDIS_URL=redis://redis:6379/2
+      - SECRET_KEY=your-secret-key-here
+      - LOG_LEVEL=INFO
+    depends_on:
+      - elasticsearch
+      - redis
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+    networks:
+      - ritchermap-network
+  
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.18.1
+    environment:
+      - bootstrap.memory_lock=true
+      - cluster.name=docker-cluster
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ulimits:
+      memlock:
+        hard: -1
+        soft: -1
+    volumes:
+      - elasticsearch_volume:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - ritchermap-network
+    healthcheck:
+      interval: 30s
+      retries: 10
+      test: curl -s http://localhost:9200/_cluster/health | grep -vq '"status":"red"'
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.18.1
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - 5601:5601
+    networks:
+      - ritchermap-network
+    healthcheck:
+      interval: 30s
+      retries: 20
+      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:5601/api/status
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: ritcher-community
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - ritchermap-network
+
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile-db
+    restart: always
+    environment:
+      POSTGRES_DB: mapdb
+      POSTGRES_USER: mapuser
+      POSTGRES_PASSWORD: mappass
+    ports:
+      - "5433:5433"
+    volumes:
+      - ./db:/docker-entrypoint-initdb.d/
+      - database_volume:/var/lib/postgresql/data
+    networks:
+      - ritchermap-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ritchermap-network
+
+volumes:
+  mysql_data:
+  database_volume:
+  mongo_data:
+  clickhouse_data:
+  minio_data:
+  grafana_data:
+  prometheus_data:
+  redis_data:
+  elasticsearch_volume:
+    driver: local
+
+networks:
+  ritchermap-network:
+    driver: bridge

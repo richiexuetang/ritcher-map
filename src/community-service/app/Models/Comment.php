@@ -4,48 +4,33 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
-//use App\Traits\Voteable;
-//use App\Traits\Moderatable;
-//use App\Traits\Cacheable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Comment extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'commentable_type',
-        'commentable_id',
+        'marker_id',
         'game_id',
         'user_id',
-        'username',
-        'content',
-        'content_html',
         'parent_id',
-        'depth',
-        'path',
-        'is_pinned',
-        'is_locked',
-        'status',
-        'metadata',
-        'edited_at'
+        'content',
+        'reactions',
+        'metadata'
     ];
-
     protected $casts = [
-        'metadata' => 'array',
-        'is_pinned' => 'boolean',
-        'is_locked' => 'boolean',
-        'edited_at' => 'datetime'
+        'reactions' => 'array',
+        'metadata' => 'array'
     ];
 
-    protected $with = ['votes'];
+    protected $dates = ['deleted_at'];
 
-    // Relationships
-    public function commentable(): MorphTo
+    public function user(): BelongsTo
     {
-        return $this->morphTo();
+        return $this->belongsTo(User::class);
     }
 
     public function parent(): BelongsTo
@@ -55,26 +40,17 @@ class Comment extends Model
 
     public function replies(): HasMany
     {
-        return $this->hasMany(Comment::class, 'parent_id')
-            ->with('replies')
-            ->orderBy('score', 'desc')
-            ->orderBy('created_at', 'asc');
-    }
-
-    public function children(): HasMany
-    {
         return $this->hasMany(Comment::class, 'parent_id');
     }
 
-    // Scopes
-    public function scopeActive($query)
+    public function moderator(): BelongsTo
     {
-        return $query->where('status', 'active');
+        return $this->belongsTo(User::class, 'moderated_by');
     }
 
-    public function scopeTopLevel($query)
+    public function scopeForMarker($query, $markerId)
     {
-        return $query->whereNull('parent_id');
+        return $query->where('marker_id', $markerId);
     }
 
     public function scopeForGame($query, $gameId)
@@ -82,83 +58,67 @@ class Comment extends Model
         return $query->where('game_id', $gameId);
     }
 
-    public function scopeByUser($query, $userId)
+    public function scopeTopLevel($query)
     {
-        return $query->where('user_id', $userId);
+        return $query->whereNull('parent_id');
     }
 
-    // Mutators
-    public function setContentAttribute($value)
+    // Accessors & Mutators
+    public function getLikesCountAttribute(): int
     {
-        $this->attributes['content'] = $value;
-        $this->attributes['content_html'] = $this->parseMarkdown($value);
+        return count($this->reactions['likes'] ?? []);
     }
 
-    // Accessors
+    public function getDislikesCountAttribute(): int
+    {
+        return count($this->reactions['dislikes'] ?? []);
+    }
+
+    public function getHelpfulCountAttribute(): int
+    {
+        return count($this->reactions['helpful'] ?? []);
+    }
+
     public function getIsEditedAttribute(): bool
     {
-        return !is_null($this->edited_at);
-    }
-
-    public function getAgeAttribute(): string
-    {
-        return $this->created_at->diffForHumans();
+        return $this->updated_at > $this->created_at;
     }
 
     // Methods
-    public function updateScore(): void
+    public function addReaction(string $type, string $userId): void
     {
-        $this->score = $this->upvotes - $this->downvotes;
-        $this->save();
-    }
+        $reactions = $this->reactions ?? [];
 
-    public function updatePath(): void
-    {
-        if ($this->parent_id) {
-            $parent = $this->parent;
-            $this->path = $parent->path . '/' . $this->id;
-            $this->depth = $parent->depth + 1;
-        } else {
-            $this->path = (string) $this->id;
-            $this->depth = 0;
+        // Remove user from other reaction types
+        foreach (['likes', 'dislikes', 'helpful'] as $reactionType) {
+            if ($reactionType !== $type && isset($reactions[$reactionType])) {
+                $reactions[$reactionType] = array_values(
+                    array_filter($reactions[$reactionType], fn($id) => $id !== $userId)
+                );
+            }
         }
-        $this->save();
+
+        // Add to requested type
+        if (!isset($reactions[$type])) {
+            $reactions[$type] = [];
+        }
+
+        if (!in_array($userId, $reactions[$type])) {
+            $reactions[$type][] = $userId;
+        }
+
+        $this->update(['reactions' => $reactions]);
     }
 
-    public function canBeEditedBy($userId): bool
+    public function removeReaction(string $type, string $userId): void
     {
-        return $this->user_id === $userId &&
-            $this->created_at->diffInHours() <= 24 &&
-            $this->status === 'active';
-    }
+        $reactions = $this->reactions ?? [];
 
-    public function canBeDeletedBy($userId): bool
-    {
-        return $this->user_id === $userId || $this->isModerator($userId);
-    }
-
-    public function markAsEdited(): void
-    {
-        $this->edited_at = now();
-        $this->save();
-    }
-
-    private function parseMarkdown(string $content): string
-    {
-        // Simple markdown parsing - in production, use a proper markdown parser
-        $content = e($content); // Escape HTML
-        $content = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $content);
-        $content = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $content);
-        $content = preg_replace('/`(.*?)`/', '<code>$1</code>', $content);
-        $content = nl2br($content);
-
-        return clean($content, 'user_html');
-    }
-
-    private function isModerator($userId): bool
-    {
-        // Check if user has moderation privileges
-        // This would typically check against a user service
-        return false;
+        if (isset($reactions[$type])) {
+            $reactions[$type] = array_values(
+                array_filter($reactions[$type], fn($id) => $id !== $userId)
+            );
+            $this->update(['reactions' => $reactions]);
+        }
     }
 }
