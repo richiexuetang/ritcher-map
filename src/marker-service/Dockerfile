@@ -29,7 +29,7 @@ COPY --from=0 /app/target/marker-service-*.jar app.jar
 RUN useradd -r -s /bin/false markerservice
 USER markerservice
 
-EXPOSE 8080
+EXPOSE 8004
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
