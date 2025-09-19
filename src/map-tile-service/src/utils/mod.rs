@@ -1,3 +1,3 @@
-pub mod error;
-pub mod spatial;
+pub mod image;
 
+pub use self::image::*;

@@ -1,0 +1,56 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'map-tile-service-monitor'
+
+# Alert manager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+# - "first_rules.yml"
+# - "second_rules.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Tile service metrics
+  - job_name: 'map-tile-service'
+    static_configs:
+      - targets: ['map-tile-service:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Redis exporter (if using Redis)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+
+  # Node exporter for system metrics
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+# Alert rules
+# Create a file named 'alerts.yml' for custom alerts
+# Example alerts:
+# groups:
+#   - name: tile_service_alerts
+#     rules:
+#       - alert: HighErrorRate
+#         expr: rate(tile_service_requests_total{status=~"5.."}[5m]) > 0.05
+#         for: 5m
+#         labels:
+#           severity: warning
+#         annotations:
+#           summary: High error rate detected
+#           description: "Error rate is {{ $value }} errors per second"

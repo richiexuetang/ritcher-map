@@ -1,0 +1,242 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: map-tile-service
+  namespace: map-tile-service
+  labels:
+    app: map-tile-service
+    component: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: map-tile-service
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: map-tile-service
+        component: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - tile-service
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: map-tile-service
+          image: map-tile-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: SERVER_HOST
+              value: "0.0.0.0"
+            - name: SERVER_PORT
+              value: "8080"
+            - name: STORAGE_PATH
+              value: "/app/data"
+            - name: STORAGE_TYPE
+              value: "filesystem"
+            - name: RUST_LOG
+              value: "info,tile_service=debug"
+            - name: SERVER_WORKERS
+              value: "4"
+            - name: MAX_UPLOAD_SIZE
+              value: "104857600"
+            - name: DEFAULT_TILE_SIZE
+              value: "256"
+            - name: MAX_ZOOM_LEVEL
+              value: "10"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: tile-storage
+              mountPath: /app/data
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: map-tile-storage
+          persistentVolumeClaim:
+            claimName: map-tile-service-pvc
+        - name: config
+          configMap:
+            name: map-tile-service-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: map-tile-service
+  namespace: map-tile-service
+  labels:
+    app: map-tile-service
+    component: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: map-tile-service
+    component: backend
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: map-tile-service-pvc
+  namespace: tile-service
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: map-tile-service-config
+  namespace: map-tile-service
+data:
+  app.toml: |
+    [server]
+    host = "0.0.0.0"
+    port = 8080
+    workers = 4
+    max_upload_size = 104857600
+    
+    [storage]
+    path = "/app/data"
+    max_tilesets = 1000
+    storage_type = "filesystem"
+    
+    [processing]
+    default_tile_size = 256
+    max_zoom_level = 10
+    default_format = "png"
+    enable_parallel = true
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: tile-service-hpa
+  namespace: tile-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: tile-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: map-tile-service-ingress
+  namespace: map-tile-service
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+spec:
+  tls:
+    - hosts:
+        - tiles.example.com
+      secretName: tile-service-tls
+  rules:
+    - host: tiles.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tile-service
+                port:
+                  number: 80
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: map-tile-service
+  namespace: map-tile-service
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: map-tile-service
+  namespace: map-tile-service
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: map-tile-service
+  namespace: map-tile-service
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: map-tile-service
+subjects:
+  - kind: ServiceAccount
+    name: map-tile-service
+    namespace: map-tile-service
