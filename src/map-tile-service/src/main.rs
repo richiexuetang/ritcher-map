@@ -52,7 +52,6 @@ async fn main() -> std::io::Result<()> {
     // Initialize services
     let image_processor = ImageProcessor::new(
         config.tile.tile_size,
-        config.tile.compression_quality,
     );
 
     let tile_generator = web::Data::new(TileGenerator::new(

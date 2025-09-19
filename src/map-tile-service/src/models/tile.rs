@@ -70,8 +70,4 @@ impl TileRequest {
     pub fn to_cache_key(&self) -> String {
         format!("tile:{}:{}:{}:{}:{}", self.game_id, self.z, self.x, self.y, self.format)
     }
-
-    pub fn to_file_path(&self, base_path: &str) -> String {
-        format!("{}/{}/{}/{}/{}.{}", base_path, self.game_id, self.z, self.x, self.y, self.format)
-    }
 }

@@ -70,7 +70,7 @@ impl Config {
     pub fn load() -> Result<Self, anyhow::Error>{
         let environment = env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string());
 
-        let mut settings = config::Config::builder().add_source(config::File::with_name(&format!("config/{}", environment)))
+        let settings = config::Config::builder().add_source(config::File::with_name(&format!("config/{}", environment)))
             .add_source(config::Environment::with_prefix("TILE_SERVICE").separator("_"))
             .build()?;
 

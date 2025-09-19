@@ -1,5 +1,4 @@
 use actix_web::{HttpResponse, ResponseError};
-use std::fmt;
 
 #[derive(Debug, thiserror::Error)]
 pub enum TileServiceError {
@@ -15,8 +14,8 @@ pub enum TileServiceError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("Tile not found: game={0}, z={1}, x={2}, y={3}")]
-    TileNotFound(String, u8, u32, u32),
+    // #[error("Tile not found: game={0}, z={1}, x={2}, y={3}")]
+    // TileNotFound(String, u8, u32, u32),
 
     #[error("Invalid tile coordinates: z={0}, x={1}, y={2}")]
     InvalidCoordinates(u8, u32, u32),
@@ -30,8 +29,8 @@ pub enum TileServiceError {
     #[error("Invalid zoom level: {0} (min: {1}, max: {2})")]
     InvalidZoomLevel(u8, u8, u8),
 
-    #[error("Configuration error: {0}")]
-    Configuration(String),
+    // #[error("Configuration error: {0}")]
+    // Configuration(String),
 
     #[error("Internal server error: {0}")]
     Internal(String),
@@ -40,9 +39,9 @@ pub enum TileServiceError {
 impl ResponseError for TileServiceError {
     fn error_response(&self) -> HttpResponse {
         match self {
-            TileServiceError::TileNotFound(_, _, _, _) => {
-                HttpResponse::NotFound().json(ErrorResponse::new("TILE_NOT_FOUND", &self.to_string()))
-            }
+            // TileServiceError::TileNotFound(_, _, _, _) => {
+            //     HttpResponse::NotFound().json(ErrorResponse::new("TILE_NOT_FOUND", &self.to_string()))
+            // }
             TileServiceError::InvalidCoordinates(_, _, _) |
             TileServiceError::InvalidZoomLevel(_, _, _) => {
                 HttpResponse::BadRequest().json(ErrorResponse::new("INVALID_PARAMETERS", &self.to_string()))

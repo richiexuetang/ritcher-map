@@ -55,11 +55,6 @@ pub async fn get_tile(
         tracing::warn!("Failed to cache tile {}: {}", cache_key, e);
     }
 
-    // Update access metrics
-    // metrics::TILE_REQUESTS_TOTAL
-    //     .with_label_values(&[&game_id, &z.to_string(), &format])
-    //     .inc();
-
     Ok(HttpResponse::Ok()
         .insert_header(("content-type", tile_response.content_type))
         .insert_header(("etag", tile_response.etag))
@@ -108,11 +103,6 @@ pub async fn delete_cache(
 
     // Invalidate all cached tiles for the game
     cache.invalidate_game_tiles(&game_id).await?;
-
-    // Update cache invalidation metrics
-    // metrics::CACHE_INVALIDATIONS_TOTAL
-    //     .with_label_values(&[&game_id])
-    //     .inc();
 
     Ok(HttpResponse::Ok().json(serde_json::json!({
         "message": "Cache cleared successfully",

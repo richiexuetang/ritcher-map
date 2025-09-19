@@ -3,13 +3,11 @@ use crate::models::{game::Game, tile::*};
 use crate::services::image_processor::ImageProcessor;
 use crate::utils::{error::TileServiceError, spatial::TileCoordinate};
 use image::DynamicImage;
-use std::collections::HashMap;
 use uuid::Uuid;
 
 pub struct TileGenerator {
     pub db: DatabasePool,
     pub image_processor: ImageProcessor,
-    pub base_map_cache: HashMap<String, DynamicImage>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -53,7 +51,6 @@ impl TileGenerator {
         Self {
             db,
             image_processor,
-            base_map_cache: HashMap::new(),
         }
     }
 

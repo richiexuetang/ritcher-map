@@ -1,28 +1,16 @@
-use image::{DynamicImage, ImageBuffer, ImageFormat, Rgba};
+use image::{DynamicImage, ImageFormat, Rgba};
 use std::io::Cursor;
 use crate::utils::error::TileServiceError;
 
 pub struct ImageProcessor {
     pub tile_size: u32,
-    pub compression_quality: u8,
 }
 
 impl ImageProcessor {
-    pub fn new(tile_size: u32, compression_quality: u8) -> Self {
+    pub fn new(tile_size: u32) -> Self {
         Self {
             tile_size,
-            compression_quality,
         }
-    }
-
-    /// Create a blank tile with transparency
-    pub fn create_blank_tile(&self, format: &str) -> Result<Vec<u8>, TileServiceError> {
-        let img = ImageBuffer::from_fn(self.tile_size, self.tile_size, |_x, _y| {
-            Rgba([0, 0, 0, 0]) // Transparent
-        });
-
-        let dynamic_img = DynamicImage::ImageRgba8(img);
-        self.encode_image(&dynamic_img, format)
     }
 
     /// Resize image to tile size
@@ -32,15 +20,6 @@ impl ImageProcessor {
             self.tile_size,
             image::imageops::FilterType::Lanczos3,
         )
-    }
-
-    /// Crop image to specific bounds within the tile
-    pub fn crop_image(&self, image: &DynamicImage, x: u32, y: u32, width: u32, height: u32) -> Result<DynamicImage, TileServiceError> {
-        if x + width > image.width() || y + height > image.height() {
-            return Err(TileServiceError::Internal("Crop bounds exceed image dimensions".to_string()));
-        }
-
-        Ok(image.crop_imm(x, y, width, height))
     }
 
     /// Encode image to specified format
@@ -81,39 +60,6 @@ impl ImageProcessor {
         // For now, fallback to PNG
         let dynamic_img = DynamicImage::ImageRgb8(image.clone());
         self.encode_image(&dynamic_img, "png")
-    }
-
-    /// Apply compression based on format
-    pub fn optimize_for_web(&self, image_data: Vec<u8>, format: &str) -> Result<Vec<u8>, TileServiceError> {
-        match format.to_lowercase().as_str() {
-            "jpg" | "jpeg" => self.optimize_jpeg(image_data),
-            "png" => self.optimize_png(image_data),
-            "webp" => Ok(image_data), // Already optimized during encoding
-            _ => Ok(image_data),
-        }
-    }
-
-    fn optimize_jpeg(&self, data: Vec<u8>) -> Result<Vec<u8>, TileServiceError> {
-        // Load and re-encode with specified quality
-        let img = image::load_from_memory(&data)?;
-        let mut buffer = Vec::new();
-        let mut cursor = Cursor::new(&mut buffer);
-
-        // Convert to RGB and save with quality
-        let rgb_img = img.to_rgb8();
-        let dynamic_img = DynamicImage::ImageRgb8(rgb_img);
-
-        // Note: image crate doesn't support quality settings directly
-        // In production, use mozjpeg or similar for better compression
-        dynamic_img.write_to(&mut cursor, ImageFormat::Jpeg)?;
-
-        Ok(buffer)
-    }
-
-    fn optimize_png(&self, data: Vec<u8>) -> Result<Vec<u8>, TileServiceError> {
-        // PNG optimization could use oxipng or similar
-        // For now, return as-is
-        Ok(data)
     }
 
     /// Composite multiple images into a single tile
