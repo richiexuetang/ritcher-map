@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS marker_history;
