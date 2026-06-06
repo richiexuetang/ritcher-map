@@ -56,8 +56,15 @@ jobs:
       - name: Prepare DB & run tests
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432
-        run: bin/rails db:test:prepare test
+          # config/database.yml reads these discrete vars for the test env.
+          DATABASE_HOST: localhost
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: postgres
+        # No committed db/schema.rb yet, so set up from migrations. Switch to
+        # `bin/rails db:test:prepare test` once a schema.rb is checked in.
+        run: |
+          bin/rails db:create db:migrate
+          bin/rails test
 
 # NOTE: brakeman / rubocop jobs were intentionally omitted — neither gem is in
 # this service's (trimmed) Gemfile, so `bin/brakeman` / `bin/rubocop` would fail.

@@ -1,0 +1,12 @@
+# Edge reverse proxy with automatic HTTPS (Let's Encrypt).
+#
+# Set DOMAIN in .env to your hostname (e.g. maps.example.com) with DNS pointing
+# at the box and ports 80/443 open — Caddy provisions the cert automatically.
+# For local/no-TLS testing use DOMAIN=:80.
+#
+# All traffic flows through the Go gateway (edge auth + routing + WebSocket
+# fan-out); reverse_proxy upgrades WebSocket connections transparently.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy gateway:8080
+}

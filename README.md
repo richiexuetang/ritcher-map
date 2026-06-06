@@ -5,10 +5,6 @@ of categorized, searchable markers and per-user progress tracking, in the spirit
 of [mapgenie.io](https://mapgenie.io). Built as a polyglot, event-driven system
 that puts each language where it's genuinely strongest.
 
-> **Note on assets:** RitcherMap ships no game map imagery. Base maps are a
-> swappable input; develop and test against synthetic or properly-licensed
-> images. Game publishers' map art is copyrighted.
-
 ---
 
 ## Why polyglot
@@ -19,14 +15,14 @@ next to a smaller, sync-sensitive **write path** (catalog edits, user progress).
 That asymmetry is what makes a language split meaningful rather than decorative —
 each service is sized and built for its workload.
 
-| Service        | Language       | Role                                                        |
-|----------------|----------------|-------------------------------------------------------------|
-| `tile-service` | Rust           | Tiles + viewport marker queries — the latency-critical read path |
-| `catalog`      | Java / Spring  | Maps, categories, markers CMS — the transactional write path & schema owner |
-| `tiling`       | Python         | Offline pipeline: source image → tile pyramid → object storage |
-| `gateway`      | Go             | Edge auth, routing, realtime sync (WebSocket fan-out)       |
-| `accounts`     | Rails          | Users, subscriptions/billing, admin                         |
-| `web`          | React + TS     | MapLibre GL frontend (Simple/pixel CRS)                     |
+| Service        | Language      | Role                                                                        |
+| -------------- | ------------- | --------------------------------------------------------------------------- |
+| `tile-service` | Rust          | Tiles + viewport marker queries — the latency-critical read path            |
+| `catalog`      | Java / Spring | Maps, categories, markers CMS — the transactional write path & schema owner |
+| `tiling`       | Python        | Offline pipeline: source image → tile pyramid → object storage              |
+| `gateway`      | Go            | Edge auth, routing, realtime sync (WebSocket fan-out)                       |
+| `accounts`     | Rails         | Users, subscriptions/billing, admin                                         |
+| `web`          | React + TS    | MapLibre GL frontend (Simple/pixel CRS)                                     |
 
 Shared backbone: **PostgreSQL + PostGIS** (spatial source of truth), **Redis**
 (cache + pub/sub), **Kafka** (cross-service events), **S3-compatible** object
@@ -76,7 +72,7 @@ Rust viewport queries, and the MapLibre client.
 ```
 ritchermap/
 ├── README.md                  # this file
-├── docker-compose.yml         # local infra: postgres+postgis, redis, kafka, minio  (planned)
+├── docker-compose.yml         # local infra: postgres+postgis, redis, kafka, minio
 ├── Makefile                   # top-level: up / test / proto / migrate              (planned)
 │
 ├── proto/                     # cross-service contracts (buf) — source of truth     (planned)
@@ -88,12 +84,12 @@ ritchermap/
 │   ├── tiling/                # Python  — tile pyramid generator
 │   ├── tile-service/          # Rust    — read path (tiles + viewport queries)
 │   ├── catalog/               # Java    — write path / CMS (owns the DB schema)
-│   ├── gateway/               # Go      — edge auth, routing, realtime sync         (planned)
-│   └── accounts/              # Rails   — users, billing, admin                     (planned)
+│   ├── gateway/               # Go      — edge auth, routing, realtime sync
+│   └── accounts/              # Rails   — users, billing, admin
 │
 ├── web/                       # React + TS + MapLibre frontend                      (planned)
 │
-├── infra/                     # deployment (k8s / terraform), shared infra config   (planned)
+├── infra/                     # deployment (k8s / terraform), shared infra config
 └── tools/                     # repo-wide scripts: codegen, seed data, lint         (planned)
 ```
 
@@ -107,16 +103,16 @@ unify five toolchains.
 
 This is an in-progress learning project. What's actually built vs. designed:
 
-| Component      | Status                | Notes                                                        |
-|----------------|-----------------------|--------------------------------------------------------------|
-| `tiling`       | ✅ Built & tested     | End-to-end verified: image → pyramid → S3/disk + manifest    |
-| `tile-service` | ✅ Built & tested     | 17 tests pass; verified over HTTP against real tiles         |
-| `catalog`      | ✅ Built              | Compiles & runs; integration tests need Testcontainers       |
-| `proto`        | 🚧 Planned            | Contracts mirrored by hand for now                           |
-| `gateway`      | 🚧 Planned            | Design complete                                              |
-| `accounts`     | 🚧 Planned            | Design complete                                              |
-| `web`          | 🚧 Planned            | Design complete                                              |
-| `infra` / CI   | 🚧 Planned            | docker-compose + path-filtered CI per service                |
+| Component      | Status            | Notes                                                     |
+| -------------- | ----------------- | --------------------------------------------------------- |
+| `tiling`       | ✅ Built & tested | End-to-end verified: image → pyramid → S3/disk + manifest |
+| `tile-service` | ✅ Built & tested | 17 tests pass; verified over HTTP against real tiles      |
+| `catalog`      | ✅ Built          | Compiles & runs; integration tests need Testcontainers    |
+| `proto`        | ✅ Built          | Contracts mirrored by hand for now                        |
+| `gateway`      | ✅ Built          | Design complete                                           |
+| `accounts`     | ✅ Built          | Design complete                                           |
+| `web`          | ✅ Built          | Design complete                                           |
+| `infra` / CI   | ✅ Built          | docker-compose + path-filtered CI per service             |
 
 ---
 

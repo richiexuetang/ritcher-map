@@ -49,7 +49,7 @@ services:
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
@@ -81,7 +81,10 @@ services:
         condition: service_healthy
     environment:
       RAILS_ENV: test
-      DATABASE_URL: postgres://postgres:postgres@accounts-db:5432
+      # config/database.yml reads these discrete vars for the test env (not DATABASE_URL).
+      DATABASE_HOST: accounts-db
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
 
   tile-test:
     build:

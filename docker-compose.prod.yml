@@ -1,0 +1,193 @@
+# Single-box production deploy for RitcherMap (cheapest path: one VM + this file).
+# Frontend (web) is served separately (Cloudflare/GitHub Pages) — not here.
+#
+#   cp .env.example .env && edit it
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml --profile tiling run --rm tiling   # tile a map on demand
+#   docker compose -f docker-compose.prod.yml logs -f catalog
+#
+# mem_limit values target a ~4 GB box (Hetzner CX22 / Oracle Ampere free tier):
+# everything-up is ~3 GB, leaving headroom. Redpanda is the heaviest dep — if
+# memory is tight, drop it and switch the event bus to Redis Streams.
+name: ritchermap
+
+services:
+  # ---- edge -------------------------------------------------------------
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [gateway]
+    mem_limit: 64m
+
+  gateway:
+    build:
+      context: src/gateway
+    restart: unless-stopped
+    environment:
+      BIND_ADDR: 0.0.0.0:8080
+      TILE_SERVICE_URL: http://tile:8080
+      CATALOG_URL: http://catalog:8081
+      ACCOUNTS_URL: http://accounts:80
+      REDIS_ADDR: redis:6379
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (openssl rand -hex 32)}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+    depends_on:
+      redis:
+        condition: service_healthy
+    mem_limit: 64m
+
+  # ---- read path --------------------------------------------------------
+  tile:
+    build:
+      context: src/tile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${CATALOG_DB:-mapgenie}
+      TILE_ORIGIN: ${TILE_ORIGIN:-http://minio:9000/tiles}
+      BIND_ADDR: 0.0.0.0:8080
+      TILE_CACHE_MB: ${TILE_CACHE_MB:-128}
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 128m
+
+  # ---- write path / schema owner ---------------------------------------
+  catalog:
+    build:
+      context: src/catalog
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/${CATALOG_DB:-mapgenie}
+      DATABASE_USER: ${POSTGRES_USER:-postgres}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KAFKA_BROKERS: redpanda:9092
+      # Capped heap for a small box; override via CATALOG_JAVA_OPTS in .env.
+      JAVA_TOOL_OPTIONS: ${CATALOG_JAVA_OPTS:--Xmx320m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC}
+    depends_on:
+      db:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+    mem_limit: 640m
+
+  # ---- users / billing --------------------------------------------------
+  accounts:
+    build:
+      context: src/accounts
+    restart: unless-stopped
+    environment:
+      RAILS_ENV: production
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY:?set RAILS_MASTER_KEY in .env (src/accounts/config/master.key)}
+      # config/database.yml reads these discrete vars (they take precedence over
+      # DATABASE_URL). bin/docker-entrypoint runs db:prepare on boot.
+      DATABASE_HOST: db
+      DATABASE_USER: ${POSTGRES_USER:-postgres}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DATABASE_NAME: ${ACCOUNTS_DB:-ritchermap_accounts}
+      # Shared HS256 secret with the gateway — must equal JWT_SECRET.
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 512m
+
+  # ---- offline tiling worker (run as a job, not 24/7) -------------------
+  # Started only when invoked with `--profile tiling`; consumes one batch of
+  # map.tiling.requested events. Kept out of the default `up` to save RAM.
+  tiling:
+    build:
+      context: src/tiler
+    profiles: ["tiling"]
+    restart: "no"
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+      KAFKA_GROUP: tiling-workers
+      TILES_BUCKET: ${TILES_BUCKET:-tiles}
+      CDN_BASE_URL: ${CDN_BASE_URL:-}
+      # boto3 S3 client (MinIO by default; point at R2/S3 via .env).
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-minioadmin}
+      AWS_DEFAULT_REGION: ${S3_REGION:-us-east-1}
+      AWS_ENDPOINT_URL: ${S3_ENDPOINT:-http://minio:9000}
+    depends_on:
+      redpanda:
+        condition: service_started
+      minio:
+        condition: service_started
+    mem_limit: 512m
+
+  # ---- backbone ---------------------------------------------------------
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${CATALOG_DB:-mapgenie}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.1
+    restart: unless-stopped
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container        # single-node, low-resource profile
+      - --smp=1
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    mem_limit: 768m
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "no"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    mem_limit: 96m
+
+  minio:
+    image: minio/minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    # Uncomment to reach the MinIO console for first-time bucket setup:
+    # ports: ["9001:9001"]
+    mem_limit: 256m
+
+volumes:
+  db_data:
+  redpanda_data:
+  redis_data:
+  minio_data:
+  caddy_data:
+  caddy_config:
