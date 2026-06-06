@@ -2,7 +2,7 @@
 name = "tile-service"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.89.0"
+rust-version = "1.94.0" # bumped from 1.89: sqlx 0.9 requires rustc >= 1.94
 
 [features]
 # Expose InMemoryRepo (see repo.rs) outside of `#[cfg(test)]` via

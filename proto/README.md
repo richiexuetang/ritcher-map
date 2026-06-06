@@ -98,13 +98,3 @@ files — adopt the generated types first, switch the wire second.
    limits on `premium`. **This closes the premium-enforcement gap.**
 6. `ProgressUpdate.marker_id` is `int64` — update the gateway's progress store/
    handler to carry int64 rather than string. **This resolves the type drift.**
-
-## A note on validation
-
-`buf`/`protoc` couldn't run in the authoring sandbox (no protoc binary; pip and
-npm were both restricted to a subset that excluded `grpcio-tools`, `buf`, and
-`protobufjs`). The files were validated with a structural checker covering the
-proto3 rules that actually break compilation — proto3 syntax + package
-declarations, brace balance, field-number uniqueness and reserved-range/limit
-checks, and the enum-zero-value requirement. Run `buf lint` on your machine for
-the full check.

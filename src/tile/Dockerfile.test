@@ -2,7 +2,7 @@
 # path is unit-tested against the in-memory MarkerRepo.
 #   docker build -f Dockerfile.test -t tile-test .
 #   docker run --rm tile-test
-FROM rust:1.89.0-bookworm
+FROM rust:1.94-slim-bookworm
 
 WORKDIR /app
 COPY . .

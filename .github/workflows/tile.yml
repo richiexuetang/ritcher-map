@@ -27,11 +27,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Pinned to the rust-version in Cargo.toml.
-      - name: Install Rust 1.89.0
+      # Pinned to the rust-version in Cargo.toml (sqlx 0.9 needs rustc >= 1.94).
+      - name: Install Rust 1.94.0
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.89.0
+          toolchain: 1.94.0
           components: rustfmt, clippy
 
       - name: Cache cargo
