@@ -1,0 +1,22 @@
+# Build context for the repo-root build (Dockerfile-db) only needs db/.
+# Exclude everything heavy/irrelevant so that context stays tiny. Per-service
+# image builds use their own context (src/<svc>) + their own .dockerignore.
+.git
+.github
+.idea
+**/.DS_Store
+src/
+proto/
+web/
+*.md
+docker-compose*.yml
+
+# Build artifacts / caches (belt-and-suspenders for any future root builds)
+**/target/
+**/build/
+**/.gradle/
+**/node_modules/
+**/__pycache__/
+*.png
+*.jpg
+*.jpeg

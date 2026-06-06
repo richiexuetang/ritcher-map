@@ -1,0 +1,4 @@
+# Keep the Rust build context small — `target/` is large and rebuilt in-image.
+target/
+.git
+Dockerfile.test

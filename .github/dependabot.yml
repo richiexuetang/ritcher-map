@@ -1,0 +1,39 @@
+version: 2
+
+# One ecosystem entry per service (plus Actions + Docker). Dependabot PRs are
+# path-scoped, so they line up with the path-filtered CI workflows above.
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: gradle
+    directory: /src/catalog
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: cargo
+    directory: /src/tile
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: gomod
+    directory: /src/gateway
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: pip
+    directory: /src/tiler
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: bundler
+    directory: /src/accounts
+    schedule:
+      interval: weekly

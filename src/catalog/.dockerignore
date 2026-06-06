@@ -1,0 +1,5 @@
+# Don't ship local Gradle build output / caches into the image build context.
+build/
+.gradle/
+.git
+Dockerfile.test

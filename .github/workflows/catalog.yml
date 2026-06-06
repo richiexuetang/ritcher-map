@@ -1,0 +1,76 @@
+name: catalog
+
+# Path-filtered per the repo convention: a change to another service must never
+# trigger this build. proto/** is included because catalog generates its gRPC
+# stubs from the shared contracts.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/catalog/**'
+      - 'proto/**'
+      - '.github/workflows/catalog.yml'
+  pull_request:
+    paths:
+      - 'src/catalog/**'
+      - 'proto/**'
+      - '.github/workflows/catalog.yml'
+
+concurrency:
+  group: catalog-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: src/catalog
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      # Flyway's V1__init_schema.sql does `CREATE EXTENSION postgis`, so this
+      # MUST be a PostGIS image, not stock postgres. Creds/DB match the catalog
+      # datasource defaults in application.yml.
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: mapgenie
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # Single-node KRaft broker. The @SpringBootTest context loads the
+      # KafkaTemplate/consumer beans; a live broker lets that wiring be
+      # exercised rather than merely instantiated. apache/kafka defaults
+      # advertise localhost:9092, which is what the job reaches via the mapping.
+      kafka:
+        image: apache/kafka:3.8.0
+        ports:
+          - 9092:9092
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Build & test
+        env:
+          DATABASE_URL: jdbc:postgresql://localhost:5432/mapgenie
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: postgres
+          KAFKA_BROKERS: localhost:9092
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon build

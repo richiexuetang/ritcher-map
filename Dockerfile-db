@@ -1,0 +1,10 @@
+# PostgreSQL + PostGIS for local dev and the docker-compose test harness.
+#
+# catalog owns the real schema (its Flyway V1 runs on startup and does
+# `CREATE EXTENSION postgis`), so this image only needs PostGIS *available*. The
+# base image already enables the extension in POSTGRES_DB; the init script below
+# is an explicit, idempotent safety net (e.g. for custom DB names).
+FROM postgis/postgis:16-3.4
+
+# Anything in this dir runs once, on first init of an empty data directory.
+COPY db/init/ /docker-entrypoint-initdb.d/

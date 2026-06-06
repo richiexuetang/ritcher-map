@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package ritchermap.catalog.v1;
+
+option go_package = "github.com/ritchermap/proto/gen/go/ritchermap/catalog/v1;catalogv1";
+option java_package = "com.ritchermap.proto.catalog.v1";
+option java_multiple_files = true;
+
+// The catalog domain, shared by the catalog service (Java, writer), the read
+// path (Rust, reader), and the frontend. Coordinates are in native pixel space
+// (Simple CRS), matching the tiling pipeline and PostGIS geometry(Point, 0).
+
+enum MapStatus {
+  MAP_STATUS_UNSPECIFIED = 0;  // proto3 requires a zero default
+  MAP_STATUS_DRAFT = 1;
+  MAP_STATUS_UPLOADED = 2;
+  MAP_STATUS_TILING = 3;
+  MAP_STATUS_READY = 4;
+  MAP_STATUS_FAILED = 5;
+}
+
+message Map {
+  int64 id = 1;
+  string game_slug = 2;
+  string map_slug = 3;
+  string name = 4;
+  string prefix = 5;
+  MapStatus status = 6;
+  // Populated only when tiling completes; unset while DRAFT/UPLOADED.
+  optional int64 width = 7;
+  optional int64 height = 8;
+  optional int32 max_zoom = 9;
+  int32 tile_size = 10;
+  string format = 11;
+}
+
+message Category {
+  int64 id = 1;
+  int64 map_id = 2;
+  optional int64 parent_id = 3;
+  string slug = 4;
+  string name = 5;
+  string icon = 6;
+  int32 sort_order = 7;
+}
+
+message Marker {
+  int64 id = 1;
+  int64 map_id = 2;
+  int64 category_id = 3;
+  string title = 4;
+  string description = 5;
+  double x = 6;  // pixel-space coordinate
+  double y = 7;
+}
+
+// catalog -> read path (Rust), topic "catalog.changed".
+// Emitted after a committed write; the read service invalidates the affected
+// map's tile/viewport cache entries.
+message CatalogChanged {
+  int64 map_id = 1;
+  Kind kind = 2;
+  Action action = 3;
+
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    KIND_MAP = 1;
+    KIND_CATEGORY = 2;
+    KIND_MARKER = 3;
+  }
+
+  enum Action {
+    ACTION_UNSPECIFIED = 0;
+    ACTION_CREATED = 1;
+    ACTION_UPDATED = 2;
+    ACTION_DELETED = 3;
+    ACTION_BULK_IMPORTED = 4;
+  }
+}

@@ -1,0 +1,10 @@
+# Exclude the ~33 MB of sample map art and Python caches from the build context.
+maps/*.png
+maps/*.jpg
+maps/*.jpeg
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+.git
+Dockerfile.test

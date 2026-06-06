@@ -1,0 +1,16 @@
+# Hermetic test image for the gateway (Go). No external deps.
+#   docker build -f Dockerfile.test -t gateway-test .
+#   docker run --rm gateway-test
+# Or via the repo-root harness: docker compose -f docker-compose.test.yml run --rm gateway-test
+FROM golang:1.24.7-bookworm
+
+WORKDIR /app
+
+# Module layer cached separately from source for fast rebuilds.
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# gofmt is left advisory (a few files aren't formatted yet); build/vet/test gate.
+CMD ["sh", "-c", "go build ./... && go vet ./... && go test ./..."]

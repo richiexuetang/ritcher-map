@@ -1,0 +1,64 @@
+name: accounts
+
+# No proto/** trigger: accounts (Rails) is not a proto consumer — its only
+# cross-service contract is the gateway's HS256 JWT, not a generated stub.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/accounts/**'
+      - '.github/workflows/accounts.yml'
+  pull_request:
+    paths:
+      - 'src/accounts/**'
+      - '.github/workflows/accounts.yml'
+
+concurrency:
+  group: accounts-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: src/accounts
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # accounts is users/billing — a plain Postgres, no PostGIS needed.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+          working-directory: src/accounts
+
+      - name: Prepare DB & run tests
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432
+        run: bin/rails db:test:prepare test
+
+# NOTE: brakeman / rubocop jobs were intentionally omitted — neither gem is in
+# this service's (trimmed) Gemfile, so `bin/brakeman` / `bin/rubocop` would fail.
+# Add the gems and re-introduce those jobs if you want static analysis + lint.

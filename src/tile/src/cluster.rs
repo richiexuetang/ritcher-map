@@ -95,7 +95,13 @@ mod tests {
     use super::*;
 
     fn m(id: i64, cat: i32, x: f64, y: f64) -> Marker {
-        Marker { id, category_id: cat, x, y, title: None }
+        Marker {
+            id,
+            category_id: cat,
+            x,
+            y,
+            title: None,
+        }
     }
 
     #[test]
@@ -115,7 +121,11 @@ mod tests {
 
     #[test]
     fn nearby_markers_merge_centroid_is_averaged() {
-        let cfg = ClusterConfig { max_markers: 500, cell_px: 64.0, tile_size: 256.0 };
+        let cfg = ClusterConfig {
+            max_markers: 500,
+            cell_px: 64.0,
+            tile_size: 256.0,
+        };
         // Two markers 10px apart at native zoom share a 64px cell.
         let markers = vec![m(1, 7, 100.0, 100.0), m(2, 7, 110.0, 100.0)];
         let clusters = cluster_markers(&markers, 5, 5, &cfg);
@@ -127,7 +137,11 @@ mod tests {
 
     #[test]
     fn distant_markers_stay_separate() {
-        let cfg = ClusterConfig { max_markers: 500, cell_px: 64.0, tile_size: 256.0 };
+        let cfg = ClusterConfig {
+            max_markers: 500,
+            cell_px: 64.0,
+            tile_size: 256.0,
+        };
         // 1000px apart at native zoom -> different cells.
         let markers = vec![m(1, 7, 0.0, 0.0), m(2, 7, 1000.0, 1000.0)];
         let clusters = cluster_markers(&markers, 5, 5, &cfg);
@@ -137,7 +151,11 @@ mod tests {
 
     #[test]
     fn zooming_out_merges_previously_separate_markers() {
-        let cfg = ClusterConfig { max_markers: 500, cell_px: 64.0, tile_size: 256.0 };
+        let cfg = ClusterConfig {
+            max_markers: 500,
+            cell_px: 64.0,
+            tile_size: 256.0,
+        };
         let markers = vec![m(1, 7, 0.0, 0.0), m(2, 7, 200.0, 0.0)];
         // At native zoom (cell=64px) they're separate.
         assert_eq!(cluster_markers(&markers, 5, 5, &cfg).len(), 2);
@@ -147,7 +165,11 @@ mod tests {
 
     #[test]
     fn mixed_categories_drop_category_id() {
-        let cfg = ClusterConfig { max_markers: 500, cell_px: 64.0, tile_size: 256.0 };
+        let cfg = ClusterConfig {
+            max_markers: 500,
+            cell_px: 64.0,
+            tile_size: 256.0,
+        };
         let markers = vec![m(1, 7, 100.0, 100.0), m(2, 9, 110.0, 100.0)];
         let clusters = cluster_markers(&markers, 5, 5, &cfg);
         assert_eq!(clusters.len(), 1);
@@ -157,7 +179,11 @@ mod tests {
 
     #[test]
     fn output_sorted_by_count_desc() {
-        let cfg = ClusterConfig { max_markers: 500, cell_px: 64.0, tile_size: 256.0 };
+        let cfg = ClusterConfig {
+            max_markers: 500,
+            cell_px: 64.0,
+            tile_size: 256.0,
+        };
         let mut markers = vec![m(1, 7, 0.0, 0.0)];
         // pile 3 into a far cell
         for i in 0..3 {

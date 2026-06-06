@@ -1,0 +1,47 @@
+name: proto
+
+# Contract changes fan out to every consumer, so the per-service workflows also
+# trigger on proto/**. This workflow validates the contracts themselves.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'proto/**'
+      - '.github/workflows/proto.yml'
+  pull_request:
+    paths:
+      - 'proto/**'
+      - '.github/workflows/proto.yml'
+
+concurrency:
+  group: proto-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  buf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # buf breaking needs history for the baseline
+
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ github.token }}
+
+      # Enforced: the contracts must compile.
+      - name: buf build
+        run: buf build proto
+
+      # Advisory: STANDARD lint expects a ritchermap/<area>/v1/ directory layout,
+      # but the .proto files are flat for now (contracts mirrored by hand — see
+      # README). Promote to a hard gate once they move into that layout.
+      - name: buf lint (advisory)
+        continue-on-error: true
+        run: buf lint proto
+
+      # Advisory: wire-compatibility guardrail against main. Flip off
+      # continue-on-error to enforce once the contracts stabilize.
+      - name: buf breaking vs main (advisory)
+        continue-on-error: true
+        run: buf breaking proto --against ".git#branch=main,subdir=proto"

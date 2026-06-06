@@ -125,13 +125,3 @@ deliveries are safe.
 **Bulk import.** Per-row JPA `save` is slow at 5k markers; `MarkerRepositoryImpl`
 uses `JdbcTemplate.batchUpdate` with a parameterized `ST_MakePoint`, so the
 import is a single batched round trip.
-
-## A note on the build
-
-The code is structurally complete and follows current Spring Boot 3.3 / Hibernate 6
-patterns, but **the Gradle build was not verified in this sandbox** — Maven
-Central and the Gradle distribution host are blocked by the network allowlist.
-On any normal machine `./gradlew test` will pull dependencies and run. If the
-first build fails, the most likely cause is a Hibernate Spatial dialect/version
-mismatch with your Postgres version; the dialect is set to
-`PostgisPG10Dialect` which supports PostgreSQL 10+ with PostGIS 2.5+.

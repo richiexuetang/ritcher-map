@@ -37,7 +37,10 @@ pub struct TileId {
 impl TileId {
     /// `<prefix>/<z>/<x>/<y>.<ext>` — identical to the tiling pipeline layout.
     pub fn key(&self) -> String {
-        format!("{}/{}/{}/{}.{}", self.prefix, self.z, self.x, self.y, self.ext)
+        format!(
+            "{}/{}/{}/{}.{}",
+            self.prefix, self.z, self.x, self.y, self.ext
+        )
     }
 
     pub fn mime(&self) -> &'static str {
@@ -61,7 +64,9 @@ pub struct LocalTileOrigin {
 
 impl LocalTileOrigin {
     pub fn new(root: impl AsRef<Path>) -> Self {
-        Self { root: root.as_ref().to_path_buf() }
+        Self {
+            root: root.as_ref().to_path_buf(),
+        }
     }
 }
 
@@ -88,11 +93,13 @@ pub struct HttpTileOrigin {
 
 impl HttpTileOrigin {
     pub fn new(base_url: impl Into<String>) -> Self {
-        let client = hyper_util::client::legacy::Client::builder(
-            hyper_util::rt::TokioExecutor::new(),
-        )
-            .build_http();
-        Self { base_url: base_url.into().trim_end_matches('/').to_string(), client }
+        let client =
+            hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new())
+                .build_http();
+        Self {
+            base_url: base_url.into().trim_end_matches('/').to_string(),
+            client,
+        }
     }
 }
 
@@ -102,7 +109,9 @@ impl TileOrigin for HttpTileOrigin {
         use http_body_util::BodyExt;
 
         let url = format!("{}/{}", self.base_url, id.key());
-        let uri: hyper::Uri = url.parse().map_err(|e| TileError::Io(format!("bad uri: {e}")))?;
+        let uri: hyper::Uri = url
+            .parse()
+            .map_err(|e| TileError::Io(format!("bad uri: {e}")))?;
         let resp = self
             .client
             .get(uri)
@@ -146,7 +155,10 @@ impl<O: TileOrigin> CachedTiles<O> {
             })
             .time_to_live(Duration::from_secs(3600))
             .build();
-        Self { origin: std::sync::Arc::new(origin), hits }
+        Self {
+            origin: std::sync::Arc::new(origin),
+            hits,
+        }
     }
 
     pub async fn get(&self, id: TileId) -> Result<Bytes, TileError> {
@@ -192,14 +204,31 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("tiles-test-{}", std::process::id()));
         let key_dir = dir.join("m/4/3");
         tokio::fs::create_dir_all(&key_dir).await.unwrap();
-        tokio::fs::write(key_dir.join("7.webp"), b"abc").await.unwrap();
+        tokio::fs::write(key_dir.join("7.webp"), b"abc")
+            .await
+            .unwrap();
 
         let origin = LocalTileOrigin::new(&dir);
-        let present = TileId { prefix: "m".into(), z: 4, x: 3, y: 7, ext: "webp".into() };
-        let missing = TileId { prefix: "m".into(), z: 4, x: 3, y: 8, ext: "webp".into() };
+        let present = TileId {
+            prefix: "m".into(),
+            z: 4,
+            x: 3,
+            y: 7,
+            ext: "webp".into(),
+        };
+        let missing = TileId {
+            prefix: "m".into(),
+            z: 4,
+            x: 3,
+            y: 8,
+            ext: "webp".into(),
+        };
 
         assert_eq!(&origin.get(&present).await.unwrap()[..], b"abc");
-        assert!(matches!(origin.get(&missing).await, Err(TileError::NotFound)));
+        assert!(matches!(
+            origin.get(&missing).await,
+            Err(TileError::NotFound)
+        ));
 
         let _ = tokio::fs::remove_dir_all(&dir).await;
     }
@@ -217,9 +246,17 @@ mod tests {
                 Ok(Bytes::from_static(b"xyz"))
             }
         }
-        let origin = Counting { n: Default::default() };
+        let origin = Counting {
+            n: Default::default(),
+        };
         let cached = CachedTiles::new(origin, 1024 * 1024);
-        let id = TileId { prefix: "m".into(), z: 0, x: 0, y: 0, ext: "webp".into() };
+        let id = TileId {
+            prefix: "m".into(),
+            z: 0,
+            x: 0,
+            y: 0,
+            ext: "webp".into(),
+        };
 
         let a = cached.get(id.clone()).await.unwrap();
         let b = cached.get(id.clone()).await.unwrap();

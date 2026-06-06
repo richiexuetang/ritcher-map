@@ -1,0 +1,19 @@
+# Hermetic test image for catalog (Java / Gradle / Spring Boot).
+# The single @SpringBootTest boots the full context, which needs PostGIS (Flyway
+# runs V1 on startup) and a Kafka broker. Run it through the repo-root harness so
+# those are provided:
+#   docker compose -f docker-compose.test.yml run --rm catalog-test
+# A bare `docker run` will fail at context load (no database).
+FROM eclipse-temurin:17-jdk-noble
+
+WORKDIR /app
+
+# Warm the Gradle dependency cache from the build scripts before copying sources.
+COPY gradlew settings.gradle build.gradle ./
+COPY gradle ./gradle
+RUN chmod +x ./gradlew && ./gradlew --no-daemon dependencies >/dev/null 2>&1 || true
+
+COPY . .
+RUN chmod +x ./gradlew
+
+CMD ["./gradlew", "--no-daemon", "build"]

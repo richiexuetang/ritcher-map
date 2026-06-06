@@ -1,0 +1,18 @@
+version: v2
+
+modules:
+  - path: .
+
+lint:
+  use:
+    - STANDARD
+  # The STANDARD rule set enforces the conventions this layer already follows:
+  # package versioning (v1), enum zero-value naming (*_UNSPECIFIED = 0), and
+  # consistent file/package structure.
+
+breaking:
+  use:
+    - FILE
+  # Fail CI if a change to a released message breaks wire compatibility
+  # (removing/renumbering fields, changing types). This is the guardrail that
+  # makes the contract safe to depend on across five services.

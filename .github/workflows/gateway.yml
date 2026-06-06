@@ -1,0 +1,53 @@
+name: gateway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/gateway/**'
+      - 'proto/**'
+      - '.github/workflows/gateway.yml'
+  pull_request:
+    paths:
+      - 'src/gateway/**'
+      - 'proto/**'
+      - '.github/workflows/gateway.yml'
+
+concurrency:
+  group: gateway-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: src/gateway
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: src/gateway/go.mod
+          cache-dependency-path: src/gateway/go.sum
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      # Advisory: a few existing files aren't gofmt-clean. Run `gofmt -w .`
+      # locally to fix, then promote this to a hard gate.
+      - name: Format check (advisory)
+        continue-on-error: true
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "Not gofmt-clean:"; echo "$unformatted"; exit 1
+          fi

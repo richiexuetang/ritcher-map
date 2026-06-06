@@ -1,109 +1,42 @@
+# Local development backbone for RitcherMap.
+#
+# Brings up the shared infrastructure the services point at via env vars:
+#   - PostgreSQL + PostGIS  (spatial source of truth; catalog's Flyway owns the schema)
+#   - Redis                 (cache + pub/sub)
+#   - Kafka                 (cross-service events, KRaft single-node)
+#   - MinIO                 (S3-compatible tile storage)
+#
+# Each service keeps its native toolchain (Cargo / Gradle / pip / go / bundler)
+# and runs against this infra — see each service's README. (This replaces an
+# earlier stale compose that referenced services which no longer exist.)
+#
+#   docker compose up -d        # start infra
+#   docker compose down         # stop
+#   docker compose down -v      # stop + wipe volumes
+#
+# For running the *test suites* in containers, use docker-compose.test.yml.
+name: ritchermap
+
 services:
-  content-management-service:
-    build: src/content-management-service
-    ports:
-      - "3000:3000"
-
-  map-tile-service:
-    build: src/map-tile-service
-
-  community-service:
-    build: src/community-service
-    environment:
-      - APP_ENV=local
-      - DB_HOST=mysql
-      - REDIS_HOST=redis
-    depends_on:
-      - mysql
-      - redis
-    networks:
-      - ritchermap-network
-
-  search-service:
-    build: src/search-service
-    ports: 
-      - "8000:8000"
-    environment: 
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - REDIS_URL=redis://redis:6379/2
-      - SECRET_KEY=your-secret-key-here
-      - LOG_LEVEL=INFO
-    depends_on:
-      - elasticsearch
-      - redis
-    volumes:
-      - ./models:/app/models
-      - ./logs:/app/logs
-    networks:
-      - ritchermap-network
-  
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.18.1
-    environment:
-      - bootstrap.memory_lock=true
-      - cluster.name=docker-cluster
-      - cluster.routing.allocation.disk.threshold_enabled=false
-      - discovery.type=single-node
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
-    ulimits:
-      memlock:
-        hard: -1
-        soft: -1
-    volumes:
-      - elasticsearch_volume:/usr/share/elasticsearch/data
-    ports:
-      - 9200:9200
-    networks:
-      - ritchermap-network
-    healthcheck:
-      interval: 30s
-      retries: 10
-      test: curl -s http://localhost:9200/_cluster/health | grep -vq '"status":"red"'
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.18.1
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    environment:
-      ELASTICSEARCH_URL: http://elasticsearch:9200
-      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
-    ports:
-      - 5601:5601
-    networks:
-      - ritchermap-network
-    healthcheck:
-      interval: 30s
-      retries: 20
-      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:5601/api/status
-
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_DATABASE: ritcher-community
-    ports:
-      - "3307:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - ritchermap-network
-
   db:
     build:
       context: .
       dockerfile: Dockerfile-db
-    restart: always
+    # Defaults chosen to match catalog's application.yml so it connects with no
+    # extra env (DATABASE_URL=jdbc:postgresql://localhost:5432/mapgenie).
     environment:
-      POSTGRES_DB: mapdb
-      POSTGRES_USER: mapuser
-      POSTGRES_PASSWORD: mappass
+      POSTGRES_DB: mapgenie
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5433"
+      - "5432:5432"
     volumes:
-      - ./db:/docker-entrypoint-initdb.d/
-      - database_volume:/var/lib/postgresql/data
-    networks:
-      - ritchermap-network
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -111,21 +44,36 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    networks:
-      - ritchermap-network
+
+  kafka:
+    image: apache/kafka:3.8.0
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:CONTROLLER
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console
+    volumes:
+      - minio_data:/data
 
 volumes:
-  mysql_data:
-  database_volume:
-  mongo_data:
-  clickhouse_data:
-  minio_data:
-  grafana_data:
-  prometheus_data:
+  db_data:
   redis_data:
-  elasticsearch_volume:
-    driver: local
-
-networks:
-  ritchermap-network:
-    driver: bridge
+  minio_data:

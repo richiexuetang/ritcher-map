@@ -1,0 +1,10 @@
+# Hermetic test image for tile-service (Rust). No database needed: the read
+# path is unit-tested against the in-memory MarkerRepo.
+#   docker build -f Dockerfile.test -t tile-test .
+#   docker run --rm tile-test
+FROM rust:1.89.0-bookworm
+
+WORKDIR /app
+COPY . .
+
+CMD ["cargo", "test", "--all-targets", "--locked"]

@@ -53,7 +53,11 @@ async fn serve<O: TileOrigin>(
     tiles: CachedTiles<O>,
     bind: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let state = Arc::new(AppState { repo, tiles, cluster_cfg: ClusterConfig::default() });
+    let state = Arc::new(AppState {
+        repo,
+        tiles,
+        cluster_cfg: ClusterConfig::default(),
+    });
     let app = router(state).layer(TraceLayer::new_for_http());
 
     let listener = tokio::net::TcpListener::bind(bind).await?;

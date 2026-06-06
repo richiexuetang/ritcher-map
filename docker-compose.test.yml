@@ -1,0 +1,99 @@
+# Hermetic test harness — ephemeral backbone + one container per service test
+# suite (built from src/<svc>/Dockerfile.test). Mirrors what the GitHub Actions
+# workflows do, but runnable locally/offline.
+#
+#   docker compose -f docker-compose.test.yml run --rm catalog-test
+#   docker compose -f docker-compose.test.yml run --rm accounts-test
+#   docker compose -f docker-compose.test.yml run --rm tile-test
+#   docker compose -f docker-compose.test.yml run --rm gateway-test
+#   docker compose -f docker-compose.test.yml run --rm tiler-test
+#   docker compose -f docker-compose.test.yml down -v     # clean up
+#
+# Databases use tmpfs (no volumes) — test data is throwaway by design.
+name: ritchermap-test
+
+services:
+  # ---- ephemeral backbone ----
+  postgis:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: mapgenie
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  accounts-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: apache/kafka:3.8.0
+    # Advertise under the compose service name so other containers can reach it.
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:CONTROLLER
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+
+  # ---- test runners ----
+  catalog-test:
+    build:
+      context: src/catalog
+      dockerfile: Dockerfile.test
+    depends_on:
+      postgis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgis:5432/mapgenie
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      KAFKA_BROKERS: kafka:9092
+
+  accounts-test:
+    build:
+      context: src/accounts
+      dockerfile: Dockerfile.test
+    depends_on:
+      accounts-db:
+        condition: service_healthy
+    environment:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@accounts-db:5432
+
+  tile-test:
+    build:
+      context: src/tile
+      dockerfile: Dockerfile.test
+
+  gateway-test:
+    build:
+      context: src/gateway
+      dockerfile: Dockerfile.test
+
+  tiler-test:
+    build:
+      context: src/tiler
+      dockerfile: Dockerfile.test

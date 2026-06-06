@@ -21,7 +21,7 @@
 
 use async_trait::async_trait;
 
-use crate::domain::{BBox, Marker, ViewportQuery};
+use crate::domain::{Marker, ViewportQuery};
 
 /// Errors the repository can surface to the HTTP layer.
 #[derive(Debug, thiserror::Error)]
@@ -65,40 +65,40 @@ impl PgMarkerRepo {
     pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
-
-    /// Build the shared `WHERE` clause. Categories are passed as an array bind
-    /// (`= ANY($n)`); an empty array means "all categories", expressed as a
-    /// separate branch so the planner can skip the category filter entirely.
-    fn bbox_envelope(b: &BBox) -> String {
-        // ST_MakeEnvelope(xmin, ymin, xmax, ymax, srid)
-        format!(
-            "ST_MakeEnvelope({}, {}, {}, {}, 0)",
-            b.min_x, b.min_y, b.max_x, b.max_y
-        )
-    }
 }
 
 #[async_trait]
 impl MarkerRepo for PgMarkerRepo {
     async fn count_in_viewport(&self, q: &ViewportQuery) -> Result<i64, RepoError> {
-        let env = Self::bbox_envelope(&q.bbox);
+        let b = &q.bbox;
+        // Envelope coords are bound as parameters (not interpolated): sqlx 0.9
+        // requires a &'static str for query_as, and binding keeps the SQL static.
         let row: (i64,) = if q.categories.is_empty() {
-            sqlx::query_as(&format!(
+            sqlx::query_as(
                 "SELECT COUNT(*) FROM markers \
-                 WHERE map_id = $1 AND geom && {env}"
-            ))
-                .bind(q.map_id)
-                .fetch_one(&self.pool)
-                .await?
+                 WHERE map_id = $1 AND geom && ST_MakeEnvelope($2, $3, $4, $5, 0)",
+            )
+            .bind(q.map_id)
+            .bind(b.min_x)
+            .bind(b.min_y)
+            .bind(b.max_x)
+            .bind(b.max_y)
+            .fetch_one(&self.pool)
+            .await?
         } else {
-            sqlx::query_as(&format!(
+            sqlx::query_as(
                 "SELECT COUNT(*) FROM markers \
-                 WHERE map_id = $1 AND category_id = ANY($2) AND geom && {env}"
-            ))
-                .bind(q.map_id)
-                .bind(&q.categories)
-                .fetch_one(&self.pool)
-                .await?
+                 WHERE map_id = $1 AND category_id = ANY($2) \
+                 AND geom && ST_MakeEnvelope($3, $4, $5, $6, 0)",
+            )
+            .bind(q.map_id)
+            .bind(&q.categories)
+            .bind(b.min_x)
+            .bind(b.min_y)
+            .bind(b.max_x)
+            .bind(b.max_y)
+            .fetch_one(&self.pool)
+            .await?
         };
         Ok(row.0)
     }
@@ -108,49 +108,66 @@ impl MarkerRepo for PgMarkerRepo {
         q: &ViewportQuery,
         limit: i64,
     ) -> Result<Vec<Marker>, RepoError> {
-        let env = Self::bbox_envelope(&q.bbox);
-        let cx = (q.bbox.min_x + q.bbox.max_x) / 2.0;
-        let cy = (q.bbox.min_y + q.bbox.max_y) / 2.0;
-        let center = format!("ST_SetSRID(ST_MakePoint({cx}, {cy}), 0)");
+        let b = &q.bbox;
+        let cx = (b.min_x + b.max_x) / 2.0;
+        let cy = (b.min_y + b.max_y) / 2.0;
 
+        // Bbox envelope and the nearest-center point are bound as parameters so
+        // the SQL stays a &'static str (sqlx 0.9 SqlSafeStr requirement).
         let rows: Vec<MarkerRow> = if q.categories.is_empty() {
-            sqlx::query_as(&format!(
+            sqlx::query_as(
                 "SELECT id, category_id, ST_X(geom) AS x, ST_Y(geom) AS y, title \
                  FROM markers \
-                 WHERE map_id = $1 AND geom && {env} \
-                 ORDER BY geom <-> {center} \
-                 LIMIT $2"
-            ))
-                .bind(q.map_id)
-                .bind(limit)
-                .fetch_all(&self.pool)
-                .await?
+                 WHERE map_id = $1 AND geom && ST_MakeEnvelope($2, $3, $4, $5, 0) \
+                 ORDER BY geom <-> ST_SetSRID(ST_MakePoint($6, $7), 0) \
+                 LIMIT $8",
+            )
+            .bind(q.map_id)
+            .bind(b.min_x)
+            .bind(b.min_y)
+            .bind(b.max_x)
+            .bind(b.max_y)
+            .bind(cx)
+            .bind(cy)
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await?
         } else {
-            sqlx::query_as(&format!(
+            sqlx::query_as(
                 "SELECT id, category_id, ST_X(geom) AS x, ST_Y(geom) AS y, title \
                  FROM markers \
-                 WHERE map_id = $1 AND category_id = ANY($2) AND geom && {env} \
-                 ORDER BY geom <-> {center} \
-                 LIMIT $3"
-            ))
-                .bind(q.map_id)
-                .bind(&q.categories)
-                .bind(limit)
-                .fetch_all(&self.pool)
-                .await?
+                 WHERE map_id = $1 AND category_id = ANY($2) \
+                 AND geom && ST_MakeEnvelope($3, $4, $5, $6, 0) \
+                 ORDER BY geom <-> ST_SetSRID(ST_MakePoint($7, $8), 0) \
+                 LIMIT $9",
+            )
+            .bind(q.map_id)
+            .bind(&q.categories)
+            .bind(b.min_x)
+            .bind(b.min_y)
+            .bind(b.max_x)
+            .bind(b.max_y)
+            .bind(cx)
+            .bind(cy)
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await?
         };
 
         Ok(rows.into_iter().map(Into::into).collect())
     }
 
     async fn map_meta(&self, map_id: i64) -> Result<Option<MapMeta>, RepoError> {
-        let row: Option<(i64, i64, i32)> = sqlx::query_as(
-            "SELECT width, height, max_zoom FROM maps WHERE id = $1",
-        )
-            .bind(map_id)
-            .fetch_optional(&self.pool)
-            .await?;
-        Ok(row.map(|(width, height, max_zoom)| MapMeta { width, height, max_zoom }))
+        let row: Option<(i64, i64, i32)> =
+            sqlx::query_as("SELECT width, height, max_zoom FROM maps WHERE id = $1")
+                .bind(map_id)
+                .fetch_optional(&self.pool)
+                .await?;
+        Ok(row.map(|(width, height, max_zoom)| MapMeta {
+            width,
+            height,
+            max_zoom,
+        }))
     }
 }
 
@@ -166,7 +183,13 @@ struct MarkerRow {
 
 impl From<MarkerRow> for Marker {
     fn from(r: MarkerRow) -> Self {
-        Marker { id: r.id, category_id: r.category_id, x: r.x, y: r.y, title: r.title }
+        Marker {
+            id: r.id,
+            category_id: r.category_id,
+            x: r.x,
+            y: r.y,
+            title: r.title,
+        }
     }
 }
 
@@ -203,7 +226,11 @@ impl MarkerRepo for InMemoryRepo {
     }
 
     async fn map_meta(&self, map_id: i64) -> Result<Option<MapMeta>, RepoError> {
-        Ok(if map_id == self.markers_map_id { Some(self.meta) } else { None })
+        Ok(if map_id == self.markers_map_id {
+            Some(self.meta)
+        } else {
+            None
+        })
     }
 }
 

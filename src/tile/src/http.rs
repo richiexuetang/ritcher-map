@@ -68,9 +68,7 @@ impl IntoResponse for ApiError {
         let (code, msg) = match self {
             ApiError::BadRequest(m) => (StatusCode::BAD_REQUEST, m),
             ApiError::NotFound => (StatusCode::NOT_FOUND, "not found".into()),
-            ApiError::Internal => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal error".into())
-            }
+            ApiError::Internal => (StatusCode::INTERNAL_SERVER_ERROR, "internal error".into()),
         };
         (code, Json(serde_json::json!({ "error": msg }))).into_response()
     }
@@ -120,7 +118,12 @@ async fn viewport_handler<R: MarkerRepo, O: TileOrigin>(
 ) -> Result<Json<ViewportResponse>, ApiError> {
     let bbox = parse_bbox(&params.bbox)?;
     let categories = parse_categories(&params.categories)?;
-    let query = ViewportQuery { map_id, bbox, zoom: params.zoom, categories };
+    let query = ViewportQuery {
+        map_id,
+        bbox,
+        zoom: params.zoom,
+        categories,
+    };
 
     let meta = state
         .repo
@@ -128,8 +131,8 @@ async fn viewport_handler<R: MarkerRepo, O: TileOrigin>(
         .await?
         .ok_or(ApiError::NotFound)?;
 
-    let resp = build_viewport_response(&state.repo, &query, meta.max_zoom, &state.cluster_cfg)
-        .await?;
+    let resp =
+        build_viewport_response(&state.repo, &query, meta.max_zoom, &state.cluster_cfg).await?;
     Ok(Json(resp))
 }
 
@@ -204,7 +207,13 @@ async fn tile_handler<R: MarkerRepo, O: TileOrigin>(
         return Err(ApiError::BadRequest("unsupported tile extension".into()));
     }
 
-    let id = TileId { prefix, z, x, y, ext: ext.to_string() };
+    let id = TileId {
+        prefix,
+        z,
+        x,
+        y,
+        ext: ext.to_string(),
+    };
     let mime = id.mime();
 
     match state.tiles.get(id).await {
@@ -248,8 +257,14 @@ mod tests {
     #[test]
     fn parse_categories_variants() {
         assert_eq!(parse_categories(&None).unwrap(), Vec::<i32>::new());
-        assert_eq!(parse_categories(&Some("".into())).unwrap(), Vec::<i32>::new());
-        assert_eq!(parse_categories(&Some("1,2,3".into())).unwrap(), vec![1, 2, 3]);
+        assert_eq!(
+            parse_categories(&Some("".into())).unwrap(),
+            Vec::<i32>::new()
+        );
+        assert_eq!(
+            parse_categories(&Some("1,2,3".into())).unwrap(),
+            vec![1, 2, 3]
+        );
         assert!(parse_categories(&Some("1,x".into())).is_err());
     }
 }

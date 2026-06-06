@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package ritchermap.progress.v1;
+
+option go_package = "github.com/ritchermap/proto/gen/go/ritchermap/progress/v1;progressv1";
+option java_package = "com.ritchermap.proto.progress.v1";
+option java_multiple_files = true;
+
+// Realtime progress sync, owned by the gateway (Go). A "mark found" is fanned
+// out to a user's other devices over the Redis pub/sub channel and the
+// per-device WebSocket.
+//
+// NOTE — type drift surfaced by this contract: the gateway currently treats
+// map_id / marker_id as opaque strings, but catalog defines marker ids as
+// int64 (BIGSERIAL). The contract forces the decision: marker_id is int64 to
+// match catalog, which means the gateway's progress store/handler should parse
+// and carry int64 rather than string. Surfacing exactly this kind of drift is
+// the point of the shared contract layer.
+
+// Broadcast to a user's devices when a marker's found-state changes.
+message ProgressUpdate {
+  int64 map_id = 1;
+  int64 marker_id = 2;
+  bool found = 3;
+}
+
+// Envelope carried on the single Redis pub/sub channel ("sync.events"): pairs
+// the target user with the update so any gateway instance can fan out to that
+// user's locally-connected devices.
+message SyncEnvelope {
+  string user_id = 1;
+  ProgressUpdate update = 2;
+}

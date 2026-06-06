@@ -1,0 +1,16 @@
+# Hermetic test image for the tiling worker (Python).
+# NOTE: .dockerignore excludes maps/*.png|*.jpg (~33 MB of sample art) so the
+# build context stays small.
+#   docker build -f Dockerfile.test -t tiler-test .
+#   docker run --rm tiler-test
+FROM python:3.11-slim-bookworm
+
+WORKDIR /app
+
+# Install deps directly (the package's own editable install is skipped while the
+# flat-module layout vs. the `tiler.cli` entry point is reconciled).
+RUN pip install --no-cache-dir "Pillow>=10" "boto3>=1.34" "kafka-python>=2.0" "pytest>=8" ruff
+
+COPY . .
+
+CMD ["sh", "-c", "python -m compileall -q . && if find . -name 'test_*.py' -o -name '*_test.py' | grep -q .; then pytest -q; else echo 'no tests yet'; fi"]

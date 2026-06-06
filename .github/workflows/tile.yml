@@ -1,0 +1,53 @@
+name: tile
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/tile/**'
+      - 'proto/**'
+      - '.github/workflows/tile.yml'
+  pull_request:
+    paths:
+      - 'src/tile/**'
+      - 'proto/**'
+      - '.github/workflows/tile.yml'
+
+concurrency:
+  group: tile-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: src/tile
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned to the rust-version in Cargo.toml.
+      - name: Install Rust 1.89.0
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.89.0
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/tile
+
+      # Unit tests need no database: the read path is tested against the
+      # in-memory MarkerRepo (see repo.rs InMemoryRepo), PostGIS only in prod.
+      - name: Build & test
+        run: cargo test --all-targets --locked
+
+      - name: Clippy (advisory)
+        continue-on-error: true
+        run: cargo clippy --all-targets --locked
+
+      - name: Format check (advisory)
+        continue-on-error: true
+        run: cargo fmt --all --check

@@ -10,7 +10,12 @@ pub struct BBox {
 
 impl BBox {
     pub fn new(min_x: f64, min_y: f64, max_x: f64, max_y: f64) -> Self {
-        Self { min_x, min_y, max_x, max_y }
+        Self {
+            min_x,
+            min_y,
+            max_x,
+            max_y,
+        }
     }
 
     pub fn width(&self) -> f64 {
@@ -97,6 +102,10 @@ pub struct ClusterConfig {
 
 impl Default for ClusterConfig {
     fn default() -> Self {
-        Self { max_markers: 500, cell_px: 64.0, tile_size: 256.0 }
+        Self {
+            max_markers: 500,
+            cell_px: 64.0,
+            tile_size: 256.0,
+        }
     }
 }

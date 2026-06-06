@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package ritchermap.tiling.v1;
+
+option go_package = "github.com/ritchermap/proto/gen/go/ritchermap/tiling/v1;tilingv1";
+option java_package = "com.ritchermap.proto.tiling.v1";
+option java_multiple_files = true;
+
+// Events exchanged between the catalog service (Java) and the tiling worker
+// (Python) over Kafka. These replace the hand-mirrored JSON shapes that lived
+// in catalog's Events.java and the Python worker — the source of the earlier
+// snake_case / field-name drift.
+
+// catalog -> tiling worker, topic "map.tiling.requested".
+// Emitted when an editor uploads a source image.
+message TilingRequested {
+  int64 map_id = 1;
+  string prefix = 2;         // tile-key namespace, e.g. "elden-ring/overworld"
+  string source_bucket = 3;
+  string source_key = 4;     // e.g. "raw/elden-ring/overworld.png"
+  string format = 5;         // "webp" | "png"
+  optional int32 max_zoom = 6; // unset -> worker chooses
+}
+
+// tiling worker -> catalog, topic "map.tiling.completed".
+// Carries the manifest facts catalog needs to mark the map READY.
+message TilingCompleted {
+  int64 map_id = 1;
+  string prefix = 2;
+  int64 width = 3;           // native pixel width
+  int64 height = 4;          // native pixel height
+  int32 max_zoom = 5;
+  int32 tile_size = 6;
+  string format = 7;
+  int64 tiles_written = 8;
+}
+
+// tiling worker -> catalog, topic "map.tiling.failed".
+// NB: this is the contract that previously disagreed — the worker sent
+// {map_id, event} while catalog expected {map_id, reason}. Defined once here,
+// both sides now agree on {map_id, reason}.
+message TilingFailed {
+  int64 map_id = 1;
+  string reason = 2;
+}

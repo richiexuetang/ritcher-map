@@ -1,0 +1,22 @@
+version: v2
+
+# Codegen for the languages whose ecosystems lean on buf/protoc directly.
+# Java and Rust consume the same .proto files through their NATIVE build tooling
+# instead (see README): Java via the Gradle protobuf plugin, Rust via prost in
+# build.rs. The .proto files here are the single source of truth either way.
+
+plugins:
+  # --- Go (gateway) ---
+  - remote: buf.build/protocolbuffers/go
+    out: gen/go
+    opt: paths=source_relative
+
+  # --- Python (tiling worker) ---
+  - remote: buf.build/protocolbuffers/python
+    out: gen/python
+  - remote: buf.build/protocolbuffers/pyi   # type stubs for editor/tooling
+    out: gen/python
+
+# Generate with:  buf generate
+# Lint with:      buf lint
+# Check breaking:  buf breaking --against '.git#branch=main'
