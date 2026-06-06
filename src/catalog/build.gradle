@@ -1,0 +1,61 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.0.6'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.ritchermap'
+version = '0.0.1'
+description = 'catalog'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// Web + validation
+	implementation("org.springframework.boot:spring-boot-starter-web")
+	implementation("org.springframework.boot:spring-boot-starter-validation")
+	implementation("org.springframework.boot:spring-boot-starter-actuator")
+
+	// Persistence (JPA + PostGIS via Hibernate Spatial)
+	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+	implementation("org.hibernate.orm:hibernate-spatial")
+	implementation("org.postgresql:postgresql")
+	// Spring Boot 4.0 split autoconfigurations into per-technology modules.
+	// flyway-core alone is just the Flyway library and does NOT register
+	// FlywayAutoConfiguration, so migrations silently never run and JPA's
+	// ddl-auto=validate fails with "missing table [categories]". The
+	// spring-boot-flyway module carries FlywayAutoConfiguration and pulls in
+	// flyway-core transitively.
+	implementation("org.springframework.boot:spring-boot-flyway")
+	implementation("org.flywaydb:flyway-database-postgresql")
+
+	// Messaging — same Spring Boot 4.0 modularization gotcha as Flyway above:
+	// KafkaAutoConfiguration (which builds KafkaTemplate/ProducerFactory/
+	// ConsumerFactory from the spring.kafka.* properties) moved into the
+	// spring-boot-kafka module. spring-kafka alone is just the library, so
+	// without this bean wiring fails: "No qualifying bean of type 'KafkaTemplate'".
+	// spring-boot-kafka pulls in spring-kafka transitively.
+	implementation("org.springframework.boot:spring-boot-kafka")
+
+	// JSON (Jackson is in starter-web, but explicit for events)
+	implementation("com.fasterxml.jackson.module:jackson-module-parameter-names")
+
+	// Tests
+	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("org.springframework.kafka:spring-kafka-test")
+	testImplementation("org.testcontainers:junit-jupiter:1.20.3")
+	testImplementation("org.testcontainers:postgresql:1.20.3")
+	testImplementation("org.testcontainers:kafka:1.20.3")
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

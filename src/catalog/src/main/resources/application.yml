@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: catalog
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/mapgenie}
+    username: ${DATABASE_USER:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate           # Flyway owns the schema; JPA only validates
+    properties:
+      hibernate:
+        # Hibernate 7 REMOVED the named spatial dialects (PostgisPG10Dialect, etc).
+        # The standard PostgreSQL dialect provides spatial support automatically
+        # when the hibernate-spatial artifact is on the classpath. You can also
+        # delete this line entirely and let Hibernate auto-detect from the JDBC
+        # connection ? both work.
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 200          # used by bulk marker import
+          time_zone: UTC
+        order_inserts: true        # required for batch_size to actually batch
+        order_updates: true
+    open-in-view: false            # keep transactions in the service layer
+
+  flyway:
+    enabled: true
+    # baseline-on-migrate was the cause of "missing table [categories]": against a
+    # non-empty DB (e.g. one the Rust service had already created maps/markers in)
+    # it baselines at V1 and SKIPS the migration, so categories never gets created.
+    # Left false (the default), Flyway runs V1 on an empty DB and fails loudly if
+    # pointed at a non-empty schema with no history table ? which surfaces the
+    # problem immediately instead of silently.
+    baseline-on-migrate: false
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      properties:
+        enable.idempotence: true   # exactly-once semantics on the producer side
+    consumer:
+      group-id: catalog
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      properties:
+        # The Python tiling worker publishes plain JSON with no Spring __TypeId__
+        # header, so tell the deserializer to use the @KafkaListener method's
+        # parameter type rather than reading a type header (which would fail).
+        spring.json.use.type.headers: false
+        # Must match YOUR base package ? your stack trace shows com.ritchermap.catalog.
+        spring.json.trusted.packages: "com.ritchermap.catalog.events"
+    listener:
+      ack-mode: manual_immediate
+
+server:
+  port: ${PORT:8081}
+
+# Event topic names. These property KEYS must match the @Value("${mapgenie.topics.*}")
+# annotations in your code (property keys are unaffected by the package rename, so
+# unless you changed the @Value strings, leave this namespace as-is).
+mapgenie:
+  topics:
+    tiling-requested: ${TILING_REQUESTED_TOPIC:map.tiling.requested}
+    tiling-completed: ${TILING_COMPLETED_TOPIC:map.tiling.completed}
+    tiling-failed:    ${TILING_FAILED_TOPIC:map.tiling.failed}
+    catalog-changed:  ${CATALOG_CHANGED_TOPIC:catalog.changed}
+
+logging:
+  level:
+    com.ritchermap: DEBUG
+    org.hibernate.SQL: INFO
