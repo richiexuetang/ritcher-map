@@ -1,0 +1,455 @@
+/* ---------------------------------------------------------------------------
+   Ritcher Map — app shell styles. Clean minimal dark theme.
+   Full-bleed map with a floating sidebar of panel cards.
+--------------------------------------------------------------------------- */
+
+:root {
+  --rm-bg: #0f1115;
+  --rm-panel-bg: rgba(24, 27, 33, 0.92);
+  --rm-panel-border: rgba(255, 255, 255, 0.08);
+  --rm-text: #e6e8eb;
+  --rm-text-dim: #9aa0a6;
+  --rm-accent: #3b82f6;
+  --rm-accent-hover: #2f6fe0;
+  --rm-danger: #ef4444;
+  --rm-success: #22c55e;
+  --rm-radius: 10px;
+  --rm-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  --rm-font:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--rm-font);
+  color: var(--rm-text);
+  background: var(--rm-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- App layout: map fills the viewport, sidebar floats over it ----------- */
+
+.rm-app {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.rm-map-area {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.rm-map-area .maplibregl-map {
+  height: 100%;
+  width: 100%;
+}
+
+.rm-map-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  background:
+    radial-gradient(circle at 30% 20%, #1a1d24, var(--rm-bg) 70%);
+  color: var(--rm-text-dim);
+}
+
+.rm-loading,
+.rm-hint {
+  font-size: 15px;
+  color: var(--rm-text-dim);
+}
+
+.rm-error {
+  color: var(--rm-danger);
+  font-size: 14px;
+  max-width: 360px;
+  text-align: center;
+}
+
+.rm-error-inline {
+  text-align: left;
+  margin: 2px 0;
+}
+
+/* --- Sidebar ------------------------------------------------------------- */
+
+.rm-sidebar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  bottom: 16px;
+  z-index: 10;
+  width: 280px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.rm-brand {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  padding: 4px 2px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* --- Panel cards --------------------------------------------------------- */
+
+.rm-panel {
+  background: var(--rm-panel-bg);
+  border: 1px solid var(--rm-panel-border);
+  border-radius: var(--rm-radius);
+  box-shadow: var(--rm-shadow);
+  backdrop-filter: blur(8px);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rm-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--rm-text-dim);
+}
+
+.rm-empty {
+  font-size: 13px;
+  color: var(--rm-text-dim);
+}
+
+/* --- Form controls ------------------------------------------------------- */
+
+.rm-select,
+.rm-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--rm-panel-border);
+  border-radius: 6px;
+  color: var(--rm-text);
+  font-size: 14px;
+  padding: 8px 10px;
+  font-family: inherit;
+}
+
+.rm-select:focus,
+.rm-input:focus {
+  outline: none;
+  border-color: var(--rm-accent);
+}
+
+.rm-btn {
+  appearance: none;
+  border: 1px solid var(--rm-panel-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--rm-text);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.rm-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.rm-btn-primary {
+  background: var(--rm-accent);
+  border-color: var(--rm-accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.rm-btn-primary:hover {
+  background: var(--rm-accent-hover);
+  border-color: var(--rm-accent-hover);
+}
+
+/* --- Map picker ---------------------------------------------------------- */
+
+.rm-id-form {
+  display: flex;
+  gap: 6px;
+}
+
+.rm-id-form .rm-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.rm-status-badge {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--rm-text-dim);
+}
+
+.rm-status-ready {
+  background: rgba(34, 197, 94, 0.18);
+  color: #5ee08a;
+}
+
+.rm-status-failed {
+  background: rgba(239, 68, 68, 0.18);
+  color: #ff8080;
+}
+
+.rm-status-tiling,
+.rm-status-uploaded {
+  background: rgba(59, 130, 246, 0.18);
+  color: #7eb0ff;
+}
+
+/* --- Category panel ------------------------------------------------------ */
+
+.rm-cat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.rm-cat-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rm-cat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.rm-cat-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.rm-cat-selected {
+  background: rgba(59, 130, 246, 0.14);
+}
+
+.rm-cat-nested {
+  margin-left: 18px;
+}
+
+.rm-cat-all {
+  border-bottom: 1px solid var(--rm-panel-border);
+  border-radius: 0;
+  padding-bottom: 8px;
+  font-weight: 600;
+}
+
+.rm-cat-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rm-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) inset;
+}
+
+.rm-cat-row input[type='checkbox'] {
+  accent-color: var(--rm-accent);
+  cursor: pointer;
+}
+
+/* --- Auth panel ---------------------------------------------------------- */
+
+.rm-auth-panel {
+  margin-top: auto;
+}
+
+.rm-user-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.rm-user-email {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rm-premium-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f5c542, #f59e0b);
+  color: #1a1206;
+  flex: 0 0 auto;
+}
+
+/* --- Banner -------------------------------------------------------------- */
+
+.rm-banner {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--rm-success);
+  color: #05210f;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: var(--rm-shadow);
+}
+
+.rm-banner-close {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* --- Login modal --------------------------------------------------------- */
+
+.rm-modal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.rm-modal {
+  position: relative;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: var(--rm-panel-bg);
+  border: 1px solid var(--rm-panel-border);
+  border-radius: var(--rm-radius);
+  box-shadow: var(--rm-shadow);
+  padding: 24px;
+}
+
+.rm-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--rm-text-dim);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.rm-modal-close:hover {
+  color: var(--rm-text);
+}
+
+/* --- Marker popup (MapLibre) --------------------------------------------- */
+
+.maplibregl-popup-content {
+  background: var(--rm-panel-bg);
+  color: var(--rm-text);
+  border: 1px solid var(--rm-panel-border);
+  border-radius: 8px;
+  box-shadow: var(--rm-shadow);
+  font-family: var(--rm-font);
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: var(--rm-panel-bg) !important;
+  border-bottom-color: var(--rm-panel-bg) !important;
+}
+
+.maplibregl-popup-close-button {
+  color: var(--rm-text-dim);
+  font-size: 16px;
+}
+
+/* --- Map-not-ready overlay (rendered by MapView) ------------------------- */
+
+.rm-map-not-ready {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 17, 21, 0.7);
+  color: var(--rm-text-dim);
+  font-size: 15px;
+  pointer-events: none;
+}
+
+/* --- Scrollbars (subtle, dark) ------------------------------------------- */
+
+.rm-sidebar::-webkit-scrollbar,
+.rm-cat-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.rm-sidebar::-webkit-scrollbar-thumb,
+.rm-cat-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
