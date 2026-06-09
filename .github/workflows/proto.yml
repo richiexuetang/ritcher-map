@@ -33,15 +33,16 @@ jobs:
       - name: buf build
         run: buf build proto
 
-      # Advisory: STANDARD lint expects a ritchermap/<area>/v1/ directory layout,
-      # but the .proto files are flat for now (contracts mirrored by hand — see
-      # README). Promote to a hard gate once they move into that layout.
-      - name: buf lint (advisory)
-        continue-on-error: true
+      # Enforced: STANDARD lint. The contracts now live in the canonical
+      # ritchermap/<area>/v1/ layout, so the package/directory rules pass and
+      # this is a hard gate against future drift.
+      - name: buf lint
         run: buf lint proto
 
-      # Advisory: wire-compatibility guardrail against main. Flip off
-      # continue-on-error to enforce once the contracts stabilize.
+      # Advisory (transitional): wire-compatibility guardrail against main.
+      # The one-time flat -> ritchermap/<area>/v1/ restructure registers as file
+      # deletions under the FILE ruleset, so this stays advisory until the
+      # canonical layout is the baseline on main — promote to a hard gate then.
       - name: buf breaking vs main (advisory)
         continue-on-error: true
         run: buf breaking proto --against ".git#branch=main,subdir=proto"
