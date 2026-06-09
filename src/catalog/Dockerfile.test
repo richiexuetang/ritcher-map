@@ -19,4 +19,4 @@ COPY . .
 COPY --from=proto . /proto
 RUN chmod +x ./gradlew
 
-CMD ["./gradlew", "--no-daemon", "build"]
+CMD ["./gradlew", "--no-daemon", "-PprotoDir=/proto", "build"]

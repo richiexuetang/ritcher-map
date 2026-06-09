@@ -321,3 +321,14 @@ cover/
 # truth; per-language stubs are generated at build time via `buf generate`,
 # the Gradle protobuf plugin, and prost — never committed).
 proto/gen/
+
+# Python (tiler service) — none of these were covered by the templates above.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
