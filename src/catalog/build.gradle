@@ -36,7 +36,10 @@ repositories {
 // the runtime always match.
 // ---------------------------------------------------------------------------
 def protobufVersion = '3.25.5'
-def protoSrcDir = file("${projectDir}/../../proto")
+// Local/CI: default to the repo's shared proto tree (../../proto). Containers
+// supply it at an explicit absolute path via -PprotoDir=/proto (the relative
+// "../../proto" traversal normalizes inconsistently from the image's /app dir).
+def protoSrcDir = file(findProperty('protoDir') ?: "${projectDir}/../../proto")
 def generatedProtoDir = layout.buildDirectory.dir("generated/source/proto").get().asFile
 
 // Classifier for the published protoc executable (e.g. osx-aarch_64,
@@ -56,27 +59,51 @@ configurations {
 	protoc
 }
 
-tasks.register('generateProto', Exec) {
+// A PLAIN task that shells out to protoc via injected ExecOperations. Two
+// deliberate choices, both forced by Gradle 9 on a Linux build agent:
+//   1. ExecOperations, not project.exec() — Project.exec() was removed in Gradle 9.
+//   2. doNotTrackState (in the task) instead of declared inputs/outputs — Gradle's
+//      input fingerprinting walks into /proc on Linux and dies ("Cannot access
+//      input property ... /proc/sys/net/ipv4/route/flush"); protoc codegen is cheap
+//      enough to simply re-run on every build.
+interface ProtocExecOps {
+	@javax.inject.Inject
+	org.gradle.process.ExecOperations getExecOps()
+}
+
+tasks.register('generateProto') {
 	description = 'Generates Java sources from the shared protobuf contract.'
 	group = 'build'
 
-	inputs.dir(protoSrcDir).withPathSensitivity(PathSensitivity.RELATIVE)
-	inputs.files(configurations.protoc)
-	outputs.dir(generatedProtoDir)
+	// protoc codegen is fast and deterministic; we deliberately skip Gradle's
+	// up-to-date tracking. Fingerprinting inputs on a Linux build agent tries to
+	// MD5 pseudo-files under /proc and fails ("Cannot access input property ...
+	// /proc/sys/net/ipv4/route/flush"); doNotTrackState avoids that entirely, at
+	// the cost of regenerating on every build (sub-second for four small protos).
+	doNotTrackState('protoc code generation — regenerated on every build')
 
-	doFirst {
+	def execOps = objects.newInstance(ProtocExecOps).execOps
+	def protocCfg = configurations.protoc
+
+	doLast {
 		generatedProtoDir.mkdirs()
-		def protocExe = configurations.protoc.singleFile
+		def protocExe = protocCfg.singleFile
 		protocExe.setExecutable(true)
-		executable protocExe.absolutePath
+		// Pass ABSOLUTE input paths under an absolute -I so protoc never resolves
+		// them against the task's working directory (which is /app in the Docker
+		// build, not the proto root). Relative inputs failed there with "Could not
+		// make proto path relative ... No such file or directory".
+		def protoInputs = [
+			'ritchermap/catalog/v1/catalog.proto',
+			'ritchermap/tiling/v1/tiling.proto',
+			'ritchermap/progress/v1/progress.proto',
+			'ritchermap/auth/v1/auth.proto',
+		].collect { new File(protoSrcDir, it).absolutePath }
+		execOps.exec {
+			executable protocExe.absolutePath
+			args(['-I', protoSrcDir.absolutePath, "--java_out=${generatedProtoDir.absolutePath}"] + protoInputs)
+		}
 	}
-
-	args '-I', protoSrcDir.absolutePath,
-		"--java_out=${generatedProtoDir.absolutePath}",
-		'ritchermap/catalog/v1/catalog.proto',
-		'ritchermap/tiling/v1/tiling.proto',
-		'ritchermap/progress/v1/progress.proto',
-		'ritchermap/auth/v1/auth.proto'
 }
 
 sourceSets {

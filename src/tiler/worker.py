@@ -43,6 +43,29 @@ class WorkerConfig:
     group_id: str
     output_bucket: str
     cdn_base_url: str | None = None
+    # Defaults to plaintext/no-auth (local Redpanda in docker-compose). Managed
+    # brokers (e.g. Redpanda Cloud) need security_protocol=SASL_SSL + SCRAM creds.
+    security_protocol: str = "PLAINTEXT"
+    sasl_mechanism: str | None = None
+    sasl_username: str | None = None
+    sasl_password: str | None = None
+
+
+def _kafka_security_kwargs(cfg: WorkerConfig) -> dict:
+    """Connection kwargs shared by the consumer and producer.
+
+    For SASL_SSL, kafka-python builds a default TLS context from the system CA
+    bundle — Redpanda Cloud serves a publicly-trusted cert, so no ssl_cafile.
+    """
+    if not cfg.security_protocol.startswith("SASL"):
+        return {"security_protocol": cfg.security_protocol}
+    return {
+        "security_protocol": cfg.security_protocol,
+        "sasl_mechanism": cfg.sasl_mechanism,
+        # kafka-python reuses these field names for SCRAM, not just PLAIN.
+        "sasl_plain_username": cfg.sasl_username,
+        "sasl_plain_password": cfg.sasl_password,
+    }
 
 
 def _load_source(s3, bucket: str, key: str) -> Image.Image:
@@ -80,6 +103,7 @@ def run(cfg: WorkerConfig) -> None:  # pragma: no cover - requires a live broker
 
     s3 = boto3.client("s3")
     store = S3TileStore(cfg.output_bucket, client=s3)
+    security = _kafka_security_kwargs(cfg)
     consumer = KafkaConsumer(
         REQUEST_TOPIC,
         bootstrap_servers=cfg.brokers,
@@ -87,10 +111,12 @@ def run(cfg: WorkerConfig) -> None:  # pragma: no cover - requires a live broker
         enable_auto_commit=False,
         value_deserializer=lambda b: b,  # raw protobuf bytes; parse below
         max_poll_records=1,  # tiling is heavy; one map per poll
+        **security,
     )
     producer = KafkaProducer(
         bootstrap_servers=cfg.brokers,
         value_serializer=lambda m: m.SerializeToString(),
+        **security,
     )
     log.info("worker up; consuming %s", REQUEST_TOPIC)
 
@@ -119,6 +145,10 @@ def main() -> None:  # pragma: no cover
             group_id=os.environ.get("KAFKA_GROUP", "tiling-workers"),
             output_bucket=os.environ["TILES_BUCKET"],
             cdn_base_url=os.environ.get("CDN_BASE_URL"),
+            security_protocol=os.environ.get("KAFKA_SECURITY_PROTOCOL", "PLAINTEXT"),
+            sasl_mechanism=os.environ.get("KAFKA_SASL_MECHANISM", "SCRAM-SHA-256"),
+            sasl_username=os.environ.get("KAFKA_SASL_USERNAME"),
+            sasl_password=os.environ.get("KAFKA_SASL_PASSWORD"),
         )
     )
 
