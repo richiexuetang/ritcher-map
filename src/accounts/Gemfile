@@ -1,0 +1,22 @@
+source "https://rubygems.org"
+
+# Trimmed for an API-only service. If you scaffold with
+# `rails new accounts --api --database=postgresql`, you can use this in place of
+# the generated Gemfile (it drops the asset/solid/kamal gems this service
+# doesn't need).
+
+gem "rails", "~> 8.0"
+gem "pg", "~> 1.5"
+gem "puma", "~> 6.4"
+
+# Boot-time caching. config/boot.rb requires it unconditionally and the
+# production Dockerfile precompiles it, so it must be present in all envs.
+gem "bootsnap", require: false
+
+gem "bcrypt", "~> 3.1"   # has_secure_password
+gem "jwt", "~> 2.8"      # session tokens (must match the gateway's HS256 contract)
+gem "stripe", "~> 12.0"  # billing
+
+group :development, :test do
+  gem "debug", platforms: %i[mri windows]
+end

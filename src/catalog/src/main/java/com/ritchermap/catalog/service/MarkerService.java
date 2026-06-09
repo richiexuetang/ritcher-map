@@ -2,7 +2,7 @@ package com.ritchermap.catalog.service;
 
 import com.ritchermap.catalog.domain.Marker;
 import com.ritchermap.catalog.error.NotFoundException;
-import com.ritchermap.catalog.events.Events.CatalogChanged;
+import com.ritchermap.proto.catalog.v1.CatalogChanged;
 import com.ritchermap.catalog.repo.CategoryRepository;
 import com.ritchermap.catalog.repo.MapRepository;
 import com.ritchermap.catalog.repo.MarkerRepository;
@@ -36,6 +36,14 @@ public class MarkerService {
         this.events = events;
     }
 
+    private static CatalogChanged markerChanged(long mapId, CatalogChanged.Action action) {
+        return CatalogChanged.newBuilder()
+                .setMapId(mapId)
+                .setKind(CatalogChanged.Kind.KIND_MARKER)
+                .setAction(action)
+                .build();
+    }
+
     private Point point(double x, double y) {
         Point p = GEOM.createPoint(new Coordinate(x, y));
         p.setSRID(0);
@@ -63,7 +71,7 @@ public class MarkerService {
         requireMapAndCategory(mapId, categoryId);
         Marker m = new Marker(mapId, categoryId, point(x, y), title, description);
         Marker saved = markers.save(m);
-        events.publishEvent(new CatalogChanged(mapId, "marker", "created"));
+        events.publishEvent(markerChanged(mapId, CatalogChanged.Action.ACTION_CREATED));
         return saved;
     }
 
@@ -73,7 +81,7 @@ public class MarkerService {
         Marker m = markers.findById(id).orElseThrow(() -> NotFoundException.of("marker", id));
         requireMapAndCategory(m.getMapId(), categoryId);
         m.update(categoryId, point(x, y), title, description);
-        events.publishEvent(new CatalogChanged(m.getMapId(), "marker", "updated"));
+        events.publishEvent(markerChanged(m.getMapId(), CatalogChanged.Action.ACTION_UPDATED));
         return m;
     }
 
@@ -82,7 +90,7 @@ public class MarkerService {
         Marker m = markers.findById(id).orElseThrow(() -> NotFoundException.of("marker", id));
         long mapId = m.getMapId();
         markers.deleteById(id);
-        events.publishEvent(new CatalogChanged(mapId, "marker", "deleted"));
+        events.publishEvent(markerChanged(mapId, CatalogChanged.Action.ACTION_DELETED));
     }
 
     /**
@@ -104,7 +112,7 @@ public class MarkerService {
             }
         }
         int n = markers.bulkInsert(rows);
-        events.publishEvent(new CatalogChanged(mapId, "marker", "bulk_imported"));
+        events.publishEvent(markerChanged(mapId, CatalogChanged.Action.ACTION_BULK_IMPORTED));
         return n;
     }
 }

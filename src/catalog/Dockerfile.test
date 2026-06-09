@@ -14,6 +14,9 @@ COPY gradle ./gradle
 RUN chmod +x ./gradlew && ./gradlew --no-daemon dependencies >/dev/null 2>&1 || true
 
 COPY . .
+# Shared protobuf contract supplied as a named build context (the proto tree
+# lives outside this service dir); generateProto reads it from /proto.
+COPY --from=proto . /proto
 RUN chmod +x ./gradlew
 
 CMD ["./gradlew", "--no-daemon", "build"]

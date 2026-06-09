@@ -6,7 +6,7 @@
 FROM python:3.11-slim-bookworm
 WORKDIR /app
 # Pillow/boto3/kafka-python ship manylinux wheels — no system build deps needed.
-RUN pip install --no-cache-dir "Pillow>=10" "boto3>=1.34" "kafka-python>=2.0"
+RUN pip install --no-cache-dir "Pillow>=10" "boto3>=1.34" "kafka-python>=2.0" "protobuf>=6.30,<7"
 # .dockerignore excludes maps/*.png|*.jpg (~33 MB of sample art).
 COPY . .
 # Required env at runtime: TILES_BUCKET, KAFKA_BROKERS, and boto3 S3 creds

@@ -1,7 +1,7 @@
 package com.ritchermap.catalog.service;
 
-import com.ritchermap.catalog.events.Events.CatalogChanged;
-import com.ritchermap.catalog.events.Events.TilingRequested;
+import com.ritchermap.proto.catalog.v1.CatalogChanged;
+import com.ritchermap.proto.tiling.v1.TilingRequested;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,12 +37,12 @@ public class CatalogEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(CatalogEventPublisher.class);
 
-    private final KafkaTemplate<String, Object> kafka;
+    private final KafkaTemplate<String, byte[]> kafka;
     private final String tilingRequestedTopic;
     private final String catalogChangedTopic;
 
     public CatalogEventPublisher(
-            KafkaTemplate<String, Object> kafka,
+            KafkaTemplate<String, byte[]> kafka,
             @Value("${mapgenie.topics.tiling-requested}") String tilingRequestedTopic,
             @Value("${mapgenie.topics.catalog-changed}") String catalogChangedTopic) {
         this.kafka = kafka;
@@ -52,8 +52,8 @@ public class CatalogEventPublisher {
 
     /** Eager publish — used for tiling requests, which aren't tied to a DB commit alone. */
     public void publishTilingRequested(TilingRequested event) {
-        log.info("publish tiling.requested map_id={} prefix={}", event.mapId(), event.prefix());
-        kafka.send(tilingRequestedTopic, String.valueOf(event.mapId()), event);
+        log.info("publish tiling.requested map_id={} prefix={}", event.getMapId(), event.getPrefix());
+        kafka.send(tilingRequestedTopic, String.valueOf(event.getMapId()), event.toByteArray());
     }
 
     /**
@@ -64,7 +64,7 @@ public class CatalogEventPublisher {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onCatalogChanged(CatalogChanged event) {
         log.debug("publish catalog.changed map_id={} kind={} action={}",
-                event.mapId(), event.kind(), event.action());
-        kafka.send(catalogChangedTopic, String.valueOf(event.mapId()), event);
+                event.getMapId(), event.getKind(), event.getAction());
+        kafka.send(catalogChangedTopic, String.valueOf(event.getMapId()), event.toByteArray());
     }
 }

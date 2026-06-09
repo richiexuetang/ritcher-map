@@ -37,25 +37,20 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    # Events are protobuf BINARY on the wire (toByteArray / parseFrom). Keys stay
+    # plain strings (the mapId, for partition affinity); values are raw byte[].
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
       acks: all
       properties:
         enable.idempotence: true   # exactly-once semantics on the producer side
     consumer:
       group-id: catalog
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
       auto-offset-reset: earliest
       enable-auto-commit: false
-      properties:
-        # The Python tiling worker publishes plain JSON with no Spring __TypeId__
-        # header, so tell the deserializer to use the @KafkaListener method's
-        # parameter type rather than reading a type header (which would fail).
-        spring.json.use.type.headers: false
-        # Must match YOUR base package ? your stack trace shows com.ritchermap.catalog.
-        spring.json.trusted.packages: "com.ritchermap.catalog.events"
     listener:
       ack-mode: manual_immediate
 

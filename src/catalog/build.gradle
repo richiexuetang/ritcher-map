@@ -18,6 +18,79 @@ repositories {
 	mavenCentral()
 }
 
+// ---------------------------------------------------------------------------
+// Protobuf code generation (hermetic).
+//
+// We deliberately do NOT use the protobuf-gradle-plugin (0.9.4): it relies on
+// Gradle APIs removed in Gradle 9, so it fails to apply on this 9.5.x wrapper.
+// Instead a registered task drives protoc directly — but protoc is RESOLVED
+// FROM MAVEN (the same platform-specific executable the plugin would download),
+// so NO system/apt protoc is needed in CI or in the Docker build; only the
+// proto files. The shared, canonical contract lives in ../../proto (the single
+// source of truth). For container builds it is supplied as a named build
+// context (see Dockerfile / Dockerfile.test, which COPY --from=proto into
+// /proto). Generated Java is build-time only, under build/generated/source/proto,
+// and is never committed.
+//
+// protoc and protobuf-java are pinned to the SAME version so generated code and
+// the runtime always match.
+// ---------------------------------------------------------------------------
+def protobufVersion = '3.25.5'
+def protoSrcDir = file("${projectDir}/../../proto")
+def generatedProtoDir = layout.buildDirectory.dir("generated/source/proto").get().asFile
+
+// Classifier for the published protoc executable (e.g. osx-aarch_64,
+// linux-x86_64, linux-aarch_64) so the right binary resolves on macOS dev
+// boxes, linux CI, and amd64/arm64 Docker images alike.
+def protocClassifier = {
+	def osName = System.getProperty('os.name').toLowerCase()
+	def osArch = System.getProperty('os.arch').toLowerCase()
+	def os = (osName.contains('mac') || osName.contains('darwin')) ? 'osx'
+			: osName.contains('win') ? 'windows' : 'linux'
+	def arch = (osArch in ['aarch64', 'arm64']) ? 'aarch_64'
+			: (osArch in ['x86_64', 'amd64']) ? 'x86_64' : osArch
+	"${os}-${arch}"
+}()
+
+configurations {
+	protoc
+}
+
+tasks.register('generateProto', Exec) {
+	description = 'Generates Java sources from the shared protobuf contract.'
+	group = 'build'
+
+	inputs.dir(protoSrcDir).withPathSensitivity(PathSensitivity.RELATIVE)
+	inputs.files(configurations.protoc)
+	outputs.dir(generatedProtoDir)
+
+	doFirst {
+		generatedProtoDir.mkdirs()
+		def protocExe = configurations.protoc.singleFile
+		protocExe.setExecutable(true)
+		executable protocExe.absolutePath
+	}
+
+	args '-I', protoSrcDir.absolutePath,
+		"--java_out=${generatedProtoDir.absolutePath}",
+		'ritchermap/catalog/v1/catalog.proto',
+		'ritchermap/tiling/v1/tiling.proto',
+		'ritchermap/progress/v1/progress.proto',
+		'ritchermap/auth/v1/auth.proto'
+}
+
+sourceSets {
+	main {
+		java {
+			srcDir generatedProtoDir
+		}
+	}
+}
+
+tasks.named('compileJava') {
+	dependsOn 'generateProto'
+}
+
 dependencies {
 	// Web + validation
 	implementation("org.springframework.boot:spring-boot-starter-web")
@@ -45,8 +118,18 @@ dependencies {
 	// spring-boot-kafka pulls in spring-kafka transitively.
 	implementation("org.springframework.boot:spring-boot-kafka")
 
-	// JSON (Jackson is in starter-web, but explicit for events)
+	// JSON (Jackson is in starter-web; explicit so the REST DTO records bind
+	// their constructor parameter names when deserializing request bodies).
 	implementation("com.fasterxml.jackson.module:jackson-module-parameter-names")
+
+	// Protobuf runtime. Wire events (catalog.changed + tiling.*) are protobuf
+	// BINARY on Kafka; protoc (resolved below from Maven) generates the classes
+	// and this is the matching runtime.
+	implementation("com.google.protobuf:protobuf-java:${protobufVersion}")
+
+	// protoc executable, resolved from Maven for the build platform and used by
+	// the generateProto task above. Build-time only; never shipped.
+	protoc("com.google.protobuf:protoc:${protobufVersion}:${protocClassifier}@exe")
 
 	// Tests
 	testImplementation("org.springframework.boot:spring-boot-starter-test")

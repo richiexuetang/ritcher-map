@@ -61,6 +61,8 @@ services:
     build:
       context: src/catalog
       dockerfile: Dockerfile.test
+      additional_contexts:
+        proto: proto
     depends_on:
       postgis:
         condition: service_healthy
