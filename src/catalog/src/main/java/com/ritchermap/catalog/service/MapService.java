@@ -4,8 +4,9 @@ import com.ritchermap.catalog.domain.GameMap;
 import com.ritchermap.catalog.domain.MapStatus;
 import com.ritchermap.catalog.error.ConflictException;
 import com.ritchermap.catalog.error.NotFoundException;
-import com.ritchermap.catalog.events.Events;
 import com.ritchermap.catalog.repo.MapRepository;
+import com.ritchermap.proto.catalog.v1.CatalogChanged;
+import com.ritchermap.proto.tiling.v1.TilingRequested;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -32,6 +33,15 @@ public class MapService {
         this.springEvents = springEvents;
     }
 
+    /** All events from this service concern a map, so kind is always KIND_MAP. */
+    private static CatalogChanged mapChanged(long mapId, CatalogChanged.Action action) {
+        return CatalogChanged.newBuilder()
+                .setMapId(mapId)
+                .setKind(CatalogChanged.Kind.KIND_MAP)
+                .setAction(action)
+                .build();
+    }
+
     @Transactional
     public GameMap create(String gameSlug, String mapSlug, String name) {
         String prefix = gameSlug + "/" + mapSlug;
@@ -39,7 +49,7 @@ public class MapService {
             throw new ConflictException("map already exists: " + prefix);
         }
         GameMap saved = maps.save(new GameMap(gameSlug, mapSlug, name));
-        springEvents.publishEvent(new Events.CatalogChanged(saved.getId(), "map", "created"));
+        springEvents.publishEvent(mapChanged(saved.getId(), CatalogChanged.Action.ACTION_CREATED));
         log.info("created map id={} prefix={}", saved.getId(), saved.getPrefix());
         return saved;
     }
@@ -58,7 +68,7 @@ public class MapService {
     public GameMap rename(long id, String name) {
         GameMap m = get(id);
         m.rename(name);
-        springEvents.publishEvent(new Events.CatalogChanged(id, "map", "updated"));
+        springEvents.publishEvent(mapChanged(id, CatalogChanged.Action.ACTION_UPDATED));
         return m;
     }
 
@@ -66,12 +76,12 @@ public class MapService {
     public void delete(long id) {
         if (!maps.existsById(id)) throw NotFoundException.of("map", id);
         maps.deleteById(id);
-        springEvents.publishEvent(new Events.CatalogChanged(id, "map", "deleted"));
+        springEvents.publishEvent(mapChanged(id, CatalogChanged.Action.ACTION_DELETED));
     }
 
     /**
      * Editor uploaded the source image. We mark the map UPLOADED and request
-     * tiling. The {@link Events.TilingRequested} event publishes immediately (not
+     * tiling. The {@link TilingRequested} event publishes immediately (not
      * AFTER_COMMIT) so it goes out even if no other state changes.
      *
      * <p>Idempotent on the catalog side: re-uploading an already-UPLOADED or
@@ -82,13 +92,17 @@ public class MapService {
     public GameMap requestTiling(long id, String sourceBucket, String sourceKey, String format) {
         GameMap m = get(id);
         m.markUploaded(sourceKey);
-        Events.TilingRequested req = new Events.TilingRequested(
-                m.getId(), m.getPrefix(), sourceBucket, sourceKey,
-                format != null ? format : "webp",
-                null
-        );
+        // max_zoom is left unset (optional) so the worker chooses, matching the
+        // previous null. The other fields map one-to-one onto the proto.
+        TilingRequested req = TilingRequested.newBuilder()
+                .setMapId(m.getId())
+                .setPrefix(m.getPrefix())
+                .setSourceBucket(sourceBucket)
+                .setSourceKey(sourceKey)
+                .setFormat(format != null ? format : "webp")
+                .build();
         kafkaPublisher.publishTilingRequested(req);
-        springEvents.publishEvent(new Events.CatalogChanged(id, "map", "updated"));
+        springEvents.publishEvent(mapChanged(id, CatalogChanged.Action.ACTION_UPDATED));
         log.info("requested tiling for map id={} source={}", id, sourceKey);
         return m;
     }
@@ -108,7 +122,7 @@ public class MapService {
             return;
         }
         m.markReady(width, height, maxZoom, tileSize, format);
-        springEvents.publishEvent(new Events.CatalogChanged(mapId, "map", "updated"));
+        springEvents.publishEvent(mapChanged(mapId, CatalogChanged.Action.ACTION_UPDATED));
         log.info("map id={} ready: {}x{} z0..{}", mapId, width, height, maxZoom);
     }
 
@@ -117,7 +131,7 @@ public class MapService {
     public void failTiling(long mapId) {
         GameMap m = get(mapId);
         m.markFailed();
-        springEvents.publishEvent(new Events.CatalogChanged(mapId, "map", "updated"));
+        springEvents.publishEvent(mapChanged(mapId, CatalogChanged.Action.ACTION_UPDATED));
         log.warn("tiling failed for map id={}", mapId);
     }
 }

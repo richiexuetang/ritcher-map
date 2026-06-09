@@ -3,7 +3,7 @@ package com.ritchermap.catalog.service;
 import com.ritchermap.catalog.domain.Category;
 import com.ritchermap.catalog.error.ConflictException;
 import com.ritchermap.catalog.error.NotFoundException;
-import com.ritchermap.catalog.events.Events.CatalogChanged;
+import com.ritchermap.proto.catalog.v1.CatalogChanged;
 import com.ritchermap.catalog.repo.CategoryRepository;
 import com.ritchermap.catalog.repo.MapRepository;
 import com.ritchermap.catalog.repo.MarkerRepository;
@@ -29,6 +29,14 @@ public class CategoryService {
         this.events = events;
     }
 
+    private static CatalogChanged categoryChanged(long mapId, CatalogChanged.Action action) {
+        return CatalogChanged.newBuilder()
+                .setMapId(mapId)
+                .setKind(CatalogChanged.Kind.KIND_CATEGORY)
+                .setAction(action)
+                .build();
+    }
+
     @Transactional(readOnly = true)
     public List<Category> list(long mapId) {
         if (!maps.existsById(mapId)) throw NotFoundException.of("map", mapId);
@@ -48,7 +56,7 @@ public class CategoryService {
         Category c = new Category(mapId, slug, name);
         c.update(name, icon, sortOrder, parentId);
         Category saved = categories.save(c);
-        events.publishEvent(new CatalogChanged(mapId, "category", "created"));
+        events.publishEvent(categoryChanged(mapId, CatalogChanged.Action.ACTION_CREATED));
         return saved;
     }
 
@@ -60,7 +68,7 @@ public class CategoryService {
             throw new ConflictException("category cannot be its own parent");
         }
         c.update(name, icon, sortOrder, parentId);
-        events.publishEvent(new CatalogChanged(c.getMapId(), "category", "updated"));
+        events.publishEvent(categoryChanged(c.getMapId(), CatalogChanged.Action.ACTION_UPDATED));
         return c;
     }
 
@@ -80,6 +88,6 @@ public class CategoryService {
         }
         long mapId = c.getMapId();
         categories.deleteById(id);
-        events.publishEvent(new CatalogChanged(mapId, "category", "deleted"));
+        events.publishEvent(categoryChanged(mapId, CatalogChanged.Action.ACTION_DELETED));
     }
 }

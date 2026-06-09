@@ -40,6 +40,9 @@ services:
       REDIS_ADDR: redis:6379
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (openssl rand -hex 32)}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      # Free-tier cap: max markers a non-premium user may track per map. 0 =
+      # unlimited (premium users always bypass). Enforced from the JWT premium claim.
+      FREE_TIER_MAX_MARKERS_PER_MAP: ${FREE_TIER_MAX_MARKERS_PER_MAP:-0}
     depends_on:
       redis:
         condition: service_healthy
@@ -64,6 +67,11 @@ services:
   catalog:
     build:
       context: src/catalog
+      # The shared protobuf contract lives at repo-root proto/ (outside this
+      # service dir); supply it as a named build context the Dockerfile COPYs
+      # from. Requires Compose v2.17+ / BuildKit.
+      additional_contexts:
+        proto: proto
     restart: unless-stopped
     environment:
       DATABASE_URL: jdbc:postgresql://db:5432/${CATALOG_DB:-mapgenie}

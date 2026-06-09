@@ -10,6 +10,10 @@ COPY gradle ./gradle
 RUN chmod +x ./gradlew && ./gradlew --no-daemon dependencies >/dev/null 2>&1 || true
 # .dockerignore excludes build/ and .gradle/.
 COPY src ./src
+# Shared protobuf contract (single source of truth) supplied as a named build
+# context; generateProto reads it from /proto (= /app/../../proto). protoc is
+# resolved from Maven by Gradle, so no system protoc is needed in the image.
+COPY --from=proto . /proto
 # bootJar only (no tests — those run in CI). Copy the executable jar, not -plain.
 RUN ./gradlew --no-daemon clean bootJar && \
     cp "$(ls build/libs/*.jar | grep -v -- '-plain\.jar')" /app/app.jar

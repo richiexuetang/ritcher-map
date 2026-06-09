@@ -47,7 +47,7 @@ func main() {
 		Cfg:      cfg,
 		Hub:      hub,
 		Bridge:   bridge,
-		Progress: progress.NewHandler(progress.NewStore(rdb), bridge),
+		Progress: progress.NewHandler(progress.NewStore(rdb), bridge, cfg.FreeTierMaxMarkersPerMap),
 	})
 	if err != nil {
 		log.Error("router", "err", err)

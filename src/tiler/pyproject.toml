@@ -3,7 +3,7 @@ name = "tiler-service"
 version = "0.1.0"
 description = "Game-map tile pyramid generator (Simple CRS, XYZ scheme)"
 requires-python = ">=3.10"
-dependencies = ["Pillow>=10"]
+dependencies = ["Pillow>=10", "protobuf>=6.30,<7"]
 
 [project.optional-dependencies]
 s3 = ["boto3>=1.34"]

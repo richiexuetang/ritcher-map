@@ -1,0 +1,24 @@
+# Hermetic test image for accounts (Rails). Needs a Postgres; provide it via the
+# repo-root harness:
+#   docker compose -f docker-compose.test.yml run --rm accounts-test
+# RUBY_VERSION matches .ruby-version.
+ARG RUBY_VERSION=3.2.0
+FROM docker.io/library/ruby:$RUBY_VERSION-slim
+
+WORKDIR /app
+
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config postgresql-client && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+COPY . .
+
+ENV RAILS_ENV=test
+# DB connection comes from DATABASE_HOST/USER/PASSWORD (config/database.yml),
+# injected by docker-compose.test.yml. There's no committed db/schema.rb yet, so
+# build the test DB from migrations rather than db:test:prepare (which loads
+# schema.rb). Switch back to `db:test:prepare test` once schema.rb is committed.
+CMD ["sh", "-c", "bin/rails db:create db:migrate && bin/rails test"]

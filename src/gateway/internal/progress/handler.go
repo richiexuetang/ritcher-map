@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/ritchermap/gateway/internal/auth"
 )
@@ -17,10 +18,14 @@ type publisher interface {
 type Handler struct {
 	store *Store
 	pub   publisher
+
+	// freeTierLimit is the max markers a non-premium user may have found per
+	// map. 0 (or negative) means unlimited.
+	freeTierLimit int
 }
 
-func NewHandler(store *Store, pub publisher) *Handler {
-	return &Handler{store: store, pub: pub}
+func NewHandler(store *Store, pub publisher, freeTierLimit int) *Handler {
+	return &Handler{store: store, pub: pub, freeTierLimit: freeTierLimit}
 }
 
 // updateRequest is the POST body: toggle one marker's found state.
@@ -58,7 +63,13 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, http.StatusOK, foundResponse{MapID: mapID, Found: found, Count: len(found)})
+	// The wire keeps marker ids as JSON strings (proto3-JSON int64 convention);
+	// the store now hands us int64, so format each one back to a string.
+	ids := make([]string, len(found))
+	for i, id := range found {
+		ids[i] = strconv.FormatInt(id, 10)
+	}
+	writeJSON(w, http.StatusOK, foundResponse{MapID: mapID, Found: ids, Count: len(ids)})
 }
 
 // Update handles POST /api/v1/progress/{mapId} — mark or unmark a marker, then
@@ -72,17 +83,41 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	mapID := r.PathValue("mapId")
 
 	var req updateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MarkerID == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"marker_id required"}`, http.StatusBadRequest)
+		return
+	}
+	// marker_id stays a JSON string on the wire (proto3-JSON int64 convention),
+	// but we carry it as int64 internally. Reject empty/non-numeric/<=0.
+	markerID, err := strconv.ParseInt(req.MarkerID, 10, 64)
+	if err != nil || markerID <= 0 {
 		http.Error(w, `{"error":"marker_id required"}`, http.StatusBadRequest)
 		return
 	}
 
+	// Free-tier enforcement: only when marking found, only for non-premium
+	// users, and only when a positive limit is configured. A marker already in
+	// the set is a no-op toggle and never blocked.
+	if req.Found && h.freeTierLimit > 0 {
+		premium, _ := auth.Premium(r.Context())
+		if !premium {
+			count, err := h.store.Count(r.Context(), userID, mapID)
+			if err != nil {
+				http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+				return
+			}
+			if count >= int64(h.freeTierLimit) && !h.store.Has(r.Context(), userID, mapID, markerID) {
+				http.Error(w, `{"error":"free tier marker limit reached"}`, http.StatusPaymentRequired)
+				return
+			}
+		}
+	}
+
 	var changed bool
-	var err error
 	if req.Found {
-		changed, err = h.store.Mark(r.Context(), userID, mapID, req.MarkerID)
+		changed, err = h.store.Mark(r.Context(), userID, mapID, markerID)
 	} else {
-		changed, err = h.store.Unmark(r.Context(), userID, mapID, req.MarkerID)
+		changed, err = h.store.Unmark(r.Context(), userID, mapID, markerID)
 	}
 	if err != nil {
 		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
@@ -93,7 +128,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	// shouldn't wake up every device for nothing.
 	if changed {
 		payload, _ := json.Marshal(event{
-			Type: "progress", MapID: mapID, MarkerID: req.MarkerID, Found: req.Found,
+			Type: "progress", MapID: mapID, MarkerID: strconv.FormatInt(markerID, 10), Found: req.Found,
 		})
 		// Fire-and-forget: the write already succeeded; a publish failure
 		// degrades realtime sync but not correctness (other devices catch up
