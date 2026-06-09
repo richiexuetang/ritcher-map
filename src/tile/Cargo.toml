@@ -27,3 +27,17 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror = "2.0.18"
 bytes = "1"
 async-trait = "0.1"
+# catalog.changed consumer. rskafka is a PURE-RUST Kafka client (no native
+# librdkafka / cmake), so it builds on the distroless image with no apt deps.
+# default-features = false drops the native lz4/zstd compression codecs we don't
+# need: catalog publishes small, uncompressed protobuf messages.
+rskafka = { version = "0.6.0", default-features = false }
+# Generated CatalogChanged type (see build.rs). prost 0.13 to match prost-build.
+prost = "0.13"
+
+[build-dependencies]
+# Pure-Rust proto codegen: protox parses .proto -> FileDescriptorSet (no protoc),
+# prost-build turns that into Rust. protox 0.8 is the line built on prost 0.13;
+# 0.9+ requires prost 0.14, which would split prost-types from prost-build 0.13.
+prost-build = "0.13"
+protox = "0.8.0"

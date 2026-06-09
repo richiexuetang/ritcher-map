@@ -47,6 +47,11 @@ pub trait MarkerRepo: Send + Sync + 'static {
     /// Native pixel dimensions + max zoom of a map (from the tiling manifest,
     /// mirrored into a `maps` row). Returns `None` if the map is unknown.
     async fn map_meta(&self, map_id: i64) -> Result<Option<MapMeta>, RepoError>;
+
+    /// Tile-key namespace (`<game_slug>/<map_slug>`) for a map, used to scope
+    /// tile-cache invalidation when the catalog signals a map changed. Returns
+    /// `None` if the map is unknown (e.g. it was deleted).
+    async fn prefix_for_map(&self, map_id: i64) -> Result<Option<String>, RepoError>;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -169,6 +174,16 @@ impl MarkerRepo for PgMarkerRepo {
             max_zoom,
         }))
     }
+
+    async fn prefix_for_map(&self, map_id: i64) -> Result<Option<String>, RepoError> {
+        // `maps` is owned by the catalog (V1__init_schema.sql: prefix TEXT NOT
+        // NULL UNIQUE); the tile service reads it.
+        let row: Option<(String,)> = sqlx::query_as("SELECT prefix FROM maps WHERE id = $1")
+            .bind(map_id)
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(row.map(|(prefix,)| prefix))
+    }
 }
 
 /// Row shape for sqlx decoding; converted into the domain `Marker`.
@@ -199,6 +214,8 @@ pub struct InMemoryRepo {
     pub markers: Vec<Marker>,
     pub markers_map_id: i64,
     pub meta: MapMeta,
+    /// Tile-key namespace for `markers_map_id`, returned by `prefix_for_map`.
+    pub prefix: String,
 }
 
 #[cfg(any(test, feature = "memrepo"))]
@@ -228,6 +245,14 @@ impl MarkerRepo for InMemoryRepo {
     async fn map_meta(&self, map_id: i64) -> Result<Option<MapMeta>, RepoError> {
         Ok(if map_id == self.markers_map_id {
             Some(self.meta)
+        } else {
+            None
+        })
+    }
+
+    async fn prefix_for_map(&self, map_id: i64) -> Result<Option<String>, RepoError> {
+        Ok(if map_id == self.markers_map_id {
+            Some(self.prefix.clone())
         } else {
             None
         })

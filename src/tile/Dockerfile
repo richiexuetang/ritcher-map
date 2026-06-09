@@ -6,6 +6,12 @@ FROM rust:1.94-slim-bookworm AS build
 WORKDIR /app
 # .dockerignore excludes target/, so this is a small context.
 COPY . .
+# Shared protobuf contract (single source of truth) lives at repo-root proto/,
+# outside this service's build context; supply it as a named build context the
+# build.rs reads via RITCHERMAP_PROTO_DIR. Codegen is pure Rust (protox +
+# prost-build), so no protoc/cmake/apt deps are needed in the image.
+COPY --from=proto . /proto
+ENV RITCHERMAP_PROTO_DIR=/proto
 RUN cargo build --release --locked
 
 # distroless/cc has glibc + libgcc (needed by the dynamically-linked binary) and

@@ -92,6 +92,11 @@ services:
     build:
       context: src/tile
       dockerfile: Dockerfile.test
+      # build.rs compiles the catalog proto during the test build; supply the
+      # shared contract as a named build context. No KAFKA_BROKERS is set, so
+      # the catalog.changed consumer stays disabled — the tests need no broker.
+      additional_contexts:
+        proto: proto
 
   gateway-test:
     build:

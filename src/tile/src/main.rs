@@ -58,6 +58,12 @@ async fn serve<O: TileOrigin>(
         tiles,
         cluster_cfg: ClusterConfig::default(),
     });
+
+    // Optional background consumer that invalidates the tile cache on catalog
+    // re-tiles. Gated on KAFKA_BROKERS; never blocks or fails startup, and is a
+    // no-op (logged once) when no broker is configured.
+    tile_service::consumer::spawn_if_configured(Arc::clone(&state));
+
     let app = router(state).layer(TraceLayer::new_for_http());
 
     let listener = tokio::net::TcpListener::bind(bind).await?;
