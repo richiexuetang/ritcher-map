@@ -316,3 +316,8 @@ cover/
 
 # Archive artifacts (if built via "mix archive.build")
 *.ez
+
+# Protobuf codegen output (the .proto files under proto/ are the source of
+# truth; per-language stubs are generated at build time via `buf generate`,
+# the Gradle protobuf plugin, and prost — never committed).
+proto/gen/
