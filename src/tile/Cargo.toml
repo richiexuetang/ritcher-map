@@ -17,7 +17,10 @@ tower = "0.5.3"
 tower-http = { version = "0.6.11", features = ["trace", "cors"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "postgres", "macros"] }
+# tls-rustls-ring-webpki: managed Postgres requires TLS (sslmode=require). Pure
+# Rust with bundled Mozilla roots — no libssl at runtime (distroless has none)
+# and no cmake at build time (which aws-lc-rs would need).
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "postgres", "macros", "tls-rustls-ring-webpki"] }
 hyper = { version = "1", features = ["client", "http1"] }
 hyper-util = { version = "0.1", features = ["client-legacy", "http1", "tokio"] }
 http-body-util = "0.1"
