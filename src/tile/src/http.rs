@@ -29,8 +29,8 @@ pub type SharedState<R, O> = Arc<AppState<R, O>>;
 pub fn router<R: MarkerRepo, O: TileOrigin>(state: SharedState<R, O>) -> Router {
     Router::new()
         .route("/healthz", get(|| async { "ok" }))
-        .route("/maps/:map_id/markers", get(viewport_handler::<R, O>))
-        .route("/tiles/*tile", get(tile_handler::<R, O>))
+        .route("/maps/{map_id}/markers", get(viewport_handler::<R, O>))
+        .route("/tiles/{*tile}", get(tile_handler::<R, O>))
         .with_state(state)
 }
 
