@@ -52,15 +52,25 @@ services:
   tile:
     build:
       context: src/tile
+      # build.rs needs the shared protobuf contract (repo-root proto/, outside
+      # this service dir) to generate the CatalogChanged consumer type.
+      additional_contexts:
+        proto: proto
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${CATALOG_DB:-mapgenie}
       TILE_ORIGIN: ${TILE_ORIGIN:-http://minio:9000/tiles}
       BIND_ADDR: 0.0.0.0:8080
       TILE_CACHE_MB: ${TILE_CACHE_MB:-128}
+      # Subscribe to catalog.changed to invalidate the tile cache on a re-tile.
+      # Same broker the catalog publishes to / the tiler consumes from.
+      KAFKA_BROKERS: redpanda:9092
+      CATALOG_CHANGED_TOPIC: ${CATALOG_CHANGED_TOPIC:-catalog.changed}
     depends_on:
       db:
         condition: service_healthy
+      redpanda:
+        condition: service_started
     mem_limit: 128m
 
   # ---- write path / schema owner ---------------------------------------

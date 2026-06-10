@@ -6,5 +6,10 @@ FROM rust:1.94-slim-bookworm
 
 WORKDIR /app
 COPY . .
+# build.rs compiles the catalog proto during the test build, so the shared
+# contract must be present. Supplied as a named build context (the proto tree
+# lives outside this service dir); codegen is pure Rust, no protoc needed.
+COPY --from=proto . /proto
+ENV RITCHERMAP_PROTO_DIR=/proto
 
 CMD ["cargo", "test", "--all-targets", "--locked"]

@@ -37,6 +37,19 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    # Defaults keep local/compose on PLAINTEXT (on-box Redpanda needs no auth).
+    # Managed brokers (Redpanda Cloud) need SASL_SSL + SCRAM: set
+    # KAFKA_SECURITY_PROTOCOL=SASL_SSL and the KAFKA_SASL_* vars below. These
+    # live under spring.kafka.* (not producer/consumer), so they apply to both.
+    security:
+      protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+    properties:
+      # Ignored when protocol is PLAINTEXT; required for SASL_SSL. JAAS config is
+      # the full login-module line, e.g.
+      #   org.apache.kafka.common.security.scram.ScramLoginModule required \
+      #     username="..." password="...";
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:SCRAM-SHA-256}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
     # Events are protobuf BINARY on the wire (toByteArray / parseFrom). Keys stay
     # plain strings (the mapId, for partition affinity); values are raw byte[].
     producer:

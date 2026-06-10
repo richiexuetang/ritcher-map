@@ -4,7 +4,9 @@
 //! against PostGIS, clustering server-side when a viewport is dense.
 
 pub mod cluster;
+pub mod consumer;
 pub mod domain;
+pub mod events;
 pub mod http;
 pub mod repo;
 pub mod tiles;

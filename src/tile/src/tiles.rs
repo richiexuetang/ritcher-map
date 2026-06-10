@@ -154,6 +154,9 @@ impl<O: TileOrigin> CachedTiles<O> {
                 v.as_ref().map(|b| b.len() as u32).unwrap_or(64).max(1)
             })
             .time_to_live(Duration::from_secs(3600))
+            // Required for `invalidate_prefix`: without this, moka rejects the
+            // `invalidate_entries_if` predicate (InvalidationClosuresDisabled).
+            .support_invalidation_closures()
             .build();
         Self {
             origin: std::sync::Arc::new(origin),
@@ -179,6 +182,37 @@ impl<O: TileOrigin> CachedTiles<O> {
             }
             Err(e) => Err(e),
         }
+    }
+
+    /// Drop every cached tile (positive or negative) under `prefix`.
+    ///
+    /// Called when the catalog signals a map changed: a re-tile rewrites the
+    /// raster bytes under the same `<prefix>/z/x/y` keys, so the previously
+    /// cached bytes are now stale. moka's `invalidate_entries_if` enqueues the
+    /// predicate to run lazily against current entries; we don't await eviction.
+    pub fn invalidate_prefix(&self, prefix: &str) {
+        let p = prefix.to_string();
+        if let Err(e) = self
+            .hits
+            .invalidate_entries_if(move |id, _v| id.prefix == p)
+        {
+            // Only happens if support_invalidation_closures() wasn't enabled at
+            // build time — a programmer error, but don't crash the consumer.
+            tracing::error!(error = %e, prefix, "tile cache invalidate_entries_if rejected");
+        }
+    }
+
+    /// Test-only: force moka's deferred maintenance (insertions/invalidations)
+    /// to run now, so assertions about cache contents are deterministic.
+    #[cfg(any(test, feature = "memrepo"))]
+    pub async fn run_pending_for_test(&self) {
+        self.hits.run_pending_tasks().await;
+    }
+
+    /// Test-only: number of live cache entries (after pending maintenance).
+    #[cfg(any(test, feature = "memrepo"))]
+    pub fn entry_count_for_test(&self) -> u64 {
+        self.hits.entry_count()
     }
 }
 
@@ -262,5 +296,37 @@ mod tests {
         let b = cached.get(id.clone()).await.unwrap();
         assert_eq!(a, b);
         assert_eq!(cached.origin.n.load(std::sync::atomic::Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn invalidate_prefix_evicts_only_matching_prefix() {
+        struct Static;
+        #[async_trait::async_trait]
+        impl TileOrigin for Static {
+            async fn get(&self, _id: &TileId) -> Result<Bytes, TileError> {
+                Ok(Bytes::from_static(b"x"))
+            }
+        }
+        let cached = CachedTiles::new(Static, 1024 * 1024);
+        let mk = |prefix: &str| TileId {
+            prefix: prefix.into(),
+            z: 0,
+            x: 0,
+            y: 0,
+            ext: "webp".into(),
+        };
+
+        // Prime two prefixes.
+        cached.get(mk("elden-ring/overworld")).await.unwrap();
+        cached.get(mk("other-map/world")).await.unwrap();
+        cached.hits.run_pending_tasks().await;
+        assert_eq!(cached.hits.entry_count(), 2);
+
+        // Invalidate one; the other survives.
+        cached.invalidate_prefix("elden-ring/overworld");
+        cached.hits.run_pending_tasks().await;
+        assert_eq!(cached.hits.entry_count(), 1);
+        assert!(cached.hits.get(&mk("other-map/world")).await.is_some());
+        assert!(cached.hits.get(&mk("elden-ring/overworld")).await.is_none());
     }
 }
