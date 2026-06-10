@@ -10,11 +10,11 @@
 web/
 *.md
 docker-compose*.yml
-# Other services' source isn't needed by either repo-root build. src/catalog/ and
-# proto/ are intentionally NOT excluded — the catalog image build copies them.
+# Other services' source isn't needed by the repo-root builds. src/catalog/,
+# src/tile/, and proto/ are intentionally NOT excluded — the catalog and tile
+# image builds copy them by path.
 src/accounts/
 src/gateway/
-src/tile/
 src/tiler/
 
 # Build artifacts / caches (belt-and-suspenders for any future root builds)

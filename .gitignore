@@ -322,6 +322,9 @@ cover/
 # the Gradle protobuf plugin, and prost — never committed).
 proto/gen/
 
+# Wrangler local-mode simulator state (R2 objects put without --remote land here).
+.wrangler/
+
 # Python (tiler service) — none of these were covered by the templates above.
 __pycache__/
 *.py[cod]

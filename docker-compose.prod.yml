@@ -51,11 +51,11 @@ services:
   # ---- read path --------------------------------------------------------
   tile:
     build:
-      context: src/tile
-      # build.rs needs the shared protobuf contract (repo-root proto/, outside
-      # this service dir) to generate the CatalogChanged consumer type.
-      additional_contexts:
-        proto: proto
+      # Repo-root context, same reason as catalog: build.rs needs the shared
+      # proto/ contract, which the Dockerfile now COPYs by path (no named build
+      # context, so single-context builders like Koyeb work too).
+      context: .
+      dockerfile: src/tile/Dockerfile
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${CATALOG_DB:-mapgenie}
