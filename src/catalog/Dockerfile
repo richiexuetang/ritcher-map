@@ -1,19 +1,24 @@
 # Production image for catalog (Java / Spring Boot 4 write path + schema owner).
 # Multi-stage: build the executable boot jar with the JDK, run it on a slim JRE.
 # Flyway runs V1 on startup against the configured (empty) database.
-#   docker build -t catalog .
+#
+# Build context is the REPO ROOT (not src/catalog): the catalog build needs both
+# src/catalog/** and the shared proto/** contract, which lives outside this dir.
+# Single-context builders (e.g. Koyeb) can't supply proto/ as a named build
+# context, so we COPY both by path from the root context instead.
+#   docker build -f src/catalog/Dockerfile -t catalog .   # run from repo root
 FROM eclipse-temurin:17-jdk-noble AS build
 WORKDIR /app
 # Warm the Gradle dependency cache from the build scripts before copying sources.
-COPY gradlew settings.gradle build.gradle ./
-COPY gradle ./gradle
+COPY src/catalog/gradlew src/catalog/settings.gradle src/catalog/build.gradle ./
+COPY src/catalog/gradle ./gradle
 RUN chmod +x ./gradlew && ./gradlew --no-daemon dependencies >/dev/null 2>&1 || true
-# .dockerignore excludes build/ and .gradle/.
-COPY src ./src
-# Shared protobuf contract (single source of truth) supplied as a named build
-# context; generateProto reads it from /proto (= /app/../../proto). protoc is
-# resolved from Maven by Gradle, so no system protoc is needed in the image.
-COPY --from=proto . /proto
+# Root .dockerignore excludes build/ and .gradle/.
+COPY src/catalog/src ./src
+# Shared protobuf contract (single source of truth). generateProto reads it from
+# /proto via -PprotoDir below; protoc is resolved from Maven by Gradle, so no
+# system protoc is needed in the image.
+COPY proto /proto
 # bootJar only (no tests — those run in CI). Copy the executable jar, not -plain.
 # -PprotoDir points the generateProto task at the contract copied above.
 RUN ./gradlew --no-daemon -PprotoDir=/proto clean bootJar && \
