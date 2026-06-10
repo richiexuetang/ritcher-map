@@ -51,11 +51,11 @@ services:
   # ---- read path --------------------------------------------------------
   tile:
     build:
-      context: src/tile
-      # build.rs needs the shared protobuf contract (repo-root proto/, outside
-      # this service dir) to generate the CatalogChanged consumer type.
-      additional_contexts:
-        proto: proto
+      # Repo-root context, same reason as catalog: build.rs needs the shared
+      # proto/ contract, which the Dockerfile now COPYs by path (no named build
+      # context, so single-context builders like Koyeb work too).
+      context: .
+      dockerfile: src/tile/Dockerfile
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${CATALOG_DB:-mapgenie}
@@ -76,12 +76,11 @@ services:
   # ---- write path / schema owner ---------------------------------------
   catalog:
     build:
-      context: src/catalog
-      # The shared protobuf contract lives at repo-root proto/ (outside this
-      # service dir); supply it as a named build context the Dockerfile COPYs
-      # from. Requires Compose v2.17+ / BuildKit.
-      additional_contexts:
-        proto: proto
+      # Repo-root context: the catalog image needs both src/catalog/ and the
+      # shared proto/ contract, and single-context builders (Koyeb) can't take a
+      # named build context — so the Dockerfile COPYs both by path.
+      context: .
+      dockerfile: src/catalog/Dockerfile
     restart: unless-stopped
     environment:
       DATABASE_URL: jdbc:postgresql://db:5432/${CATALOG_DB:-mapgenie}

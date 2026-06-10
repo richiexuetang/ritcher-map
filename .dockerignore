@@ -1,15 +1,21 @@
-# Build context for the repo-root build (Dockerfile-db) only needs db/.
-# Exclude everything heavy/irrelevant so that context stays tiny. Per-service
-# image builds use their own context (src/<svc>) + their own .dockerignore.
+# Applies to the two repo-root build contexts: Dockerfile-db (needs only db/) and
+# src/catalog/Dockerfile (needs src/catalog/ + the shared proto/). Exclude
+# everything heavy/irrelevant so the context stays small. Other services build
+# from their own context (src/<svc>) + their own .dockerignore, so they're
+# unaffected by this file.
 .git
 .github
 .idea
 **/.DS_Store
-src/
-proto/
 web/
 *.md
 docker-compose*.yml
+# Other services' source isn't needed by the repo-root builds. src/catalog/,
+# src/tile/, and proto/ are intentionally NOT excluded — the catalog and tile
+# image builds copy them by path.
+src/accounts/
+src/gateway/
+src/tiler/
 
 # Build artifacts / caches (belt-and-suspenders for any future root builds)
 **/target/
