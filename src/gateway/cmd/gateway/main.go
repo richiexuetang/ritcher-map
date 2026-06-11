@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -18,6 +19,24 @@ import (
 	"github.com/ritchermap/gateway/internal/server"
 )
 
+// newRedisClient accepts either a bare host:port (plaintext — the on-box Redis
+// in docker-compose) or a redis:// / rediss:// URL; rediss:// enables TLS,
+// which managed Redis (Upstash etc.) requires. A URL may embed its own
+// credentials; REDIS_PASSWORD still overrides when set.
+func newRedisClient(addr, password string) (*redis.Client, error) {
+	if !strings.Contains(addr, "://") {
+		return redis.NewClient(&redis.Options{Addr: addr, Password: password}), nil
+	}
+	opts, err := redis.ParseURL(addr)
+	if err != nil {
+		return nil, err
+	}
+	if password != "" {
+		opts.Password = password
+	}
+	return redis.NewClient(opts), nil
+}
+
 func main() {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
@@ -27,7 +46,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	rdb := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr, Password: cfg.RedisPassword})
+	rdb, err := newRedisClient(cfg.RedisAddr, cfg.RedisPassword)
+	if err != nil {
+		log.Error("redis config", "addr", cfg.RedisAddr, "err", err)
+		os.Exit(1)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	if err := rdb.Ping(ctx).Err(); err != nil {
