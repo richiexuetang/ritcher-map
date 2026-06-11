@@ -82,20 +82,28 @@ impl TileOrigin for LocalTileOrigin {
     }
 }
 
-/// Fetches tiles over HTTP from an object-store / CDN base URL.
+/// Fetches tiles over HTTP(S) from an object-store / CDN base URL.
+/// rustls (ring + bundled webpki roots, matching the sqlx TLS choice) handles
+/// https origins — production TILE_ORIGIN is an https R2/CDN URL; plain http
+/// still works for the on-box MinIO in docker-compose.
 pub struct HttpTileOrigin {
     base_url: String,
     client: hyper_util::client::legacy::Client<
-        hyper_util::client::legacy::connect::HttpConnector,
+        hyper_rustls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>,
         http_body_util::Empty<Bytes>,
     >,
 }
 
 impl HttpTileOrigin {
     pub fn new(base_url: impl Into<String>) -> Self {
+        let https = hyper_rustls::HttpsConnectorBuilder::new()
+            .with_webpki_roots()
+            .https_or_http()
+            .enable_http1()
+            .build();
         let client =
             hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new())
-                .build_http();
+                .build(https);
         Self {
             base_url: base_url.into().trim_end_matches('/').to_string(),
             client,
