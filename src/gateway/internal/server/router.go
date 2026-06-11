@@ -96,7 +96,40 @@ func New(d Deps) (http.Handler, error) {
 	mux.Handle("/account/", accountsProxy)
 	mux.Handle("/billing/", accountsProxy)
 
-	return mux, nil
+	// CORS wraps everything: the gateway is the single origin-policy authority,
+	// so backends (Rails/Java/Rust) never see preflights or need CORS of their own.
+	return corsMiddleware(d.Cfg.AllowedOrigins, mux), nil
+}
+
+// corsMiddleware answers browser preflights and stamps Access-Control headers
+// on allowed cross-origin requests. Non-browser traffic (no Origin header)
+// passes through untouched. Disallowed origins get no CORS headers, which
+// makes the browser block the response — no need to reject server-side.
+func corsMiddleware(allowed []string, next http.Handler) http.Handler {
+	allowOrigin := originChecker(allowed)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if allowOrigin(r) {
+			h := w.Header()
+			// Echo the origin (not "*"): Authorization-bearing requests are
+			// credentialed in practice, and echo+Vary is cache-correct.
+			h.Set("Access-Control-Allow-Origin", origin)
+			h.Add("Vary", "Origin")
+			if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
+				// Preflight: answer here; never forward OPTIONS to backends.
+				h.Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+				h.Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+				h.Set("Access-Control-Max-Age", "86400")
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // originChecker returns a websocket origin predicate. "*" disables checking
