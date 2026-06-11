@@ -23,6 +23,9 @@ serde_json = "1"
 sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "postgres", "macros", "tls-rustls-ring-webpki"] }
 hyper = { version = "1", features = ["client", "http1"] }
 hyper-util = { version = "0.1", features = ["client-legacy", "http1", "tokio"] }
+# TLS for the tile-origin client: TILE_ORIGIN is https in production (R2/CDN).
+# ring + webpki roots to match the sqlx TLS choice (no cmake, no system certs).
+hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "ring", "webpki-tokio", "tls12"] }
 http-body-util = "0.1"
 moka = { version = "0.12", features = ["future"] }
 tracing = "0.1"
