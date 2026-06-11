@@ -20,6 +20,10 @@ x86/
 build/
 bld/
 [Bb]in/
+# ^ Visual Studio template junk that also swallows Rails binstubs — without this
+# exception, fresh clones (CI, Koyeb) get no bin/docker-entrypoint or bin/rails
+# and the accounts image can't start.
+!src/accounts/bin/
 [Oo]bj/
 coverage.xml
 
