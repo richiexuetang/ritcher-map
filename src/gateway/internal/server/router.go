@@ -33,7 +33,7 @@ type Deps struct {
 //	Proxied:
 //	  /tiles/...                            -> tile-service (Rust)   public
 //	  /maps/{mapId}/markers                 -> tile-service (Rust)   public (viewport read)
-//	  /api/v1/maps,categories,markers ...   -> catalog (Java)        auth (admin/CMS)
+//	  /api/v1/maps,categories,markers ...   -> catalog (Java)        GET public, writes auth
 //	  /auth/..., /account/..., /billing/... -> accounts (Rails)
 //
 // The local /api/v1/progress/{mapId} pattern is more specific than the proxied
@@ -75,17 +75,23 @@ func New(d Deps) (http.Handler, error) {
 	mux.Handle("/tiles/", tileProxy)
 	mux.Handle("GET /maps/{mapId}/markers", tileProxy)
 
-	// --- proxied: catalog write/CMS (auth; admin-role check belongs here) ---
+	// --- proxied: catalog (GET public; writes/CMS auth, admin-role check belongs here) ---
+	// Game/map/category data IS the public site's content, so anonymous reads
+	// must pass. A "GET <path>" pattern is more specific than the bare "<path>"
+	// in the 1.22 mux, so reads bypass auth while every other verb on the same
+	// path falls through to the requireAuth registration.
 	catalogProxy, err := proxy.New(d.Cfg.CatalogURL, true)
 	if err != nil {
 		return nil, err
 	}
-	mux.Handle("/api/v1/maps", requireAuth(catalogProxy))
-	mux.Handle("/api/v1/maps/", requireAuth(catalogProxy))
-	mux.Handle("/api/v1/categories", requireAuth(catalogProxy))
-	mux.Handle("/api/v1/categories/", requireAuth(catalogProxy))
-	mux.Handle("/api/v1/markers", requireAuth(catalogProxy))
-	mux.Handle("/api/v1/markers/", requireAuth(catalogProxy))
+	for _, p := range []string{
+		"/api/v1/maps", "/api/v1/maps/",
+		"/api/v1/categories", "/api/v1/categories/",
+		"/api/v1/markers", "/api/v1/markers/",
+	} {
+		mux.Handle("GET "+p, catalogProxy)
+		mux.Handle(p, requireAuth(catalogProxy))
+	}
 
 	// --- proxied: accounts (handles its own auth/login) ---
 	accountsProxy, err := proxy.New(d.Cfg.AccountsURL, true)
