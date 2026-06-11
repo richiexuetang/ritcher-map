@@ -64,6 +64,10 @@ USER 1000:1000
 # Entrypoint prepares the database.
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
-# Start server via Thruster by default, this can be overwritten at runtime
-EXPOSE 80
-CMD ["./bin/thrust", "./bin/rails", "server"]
+# Run Puma directly (the gateway fronts this service, so Thruster's static-file
+# acceleration adds nothing — and the slimmed Gemfile doesn't bundle it).
+# Puma binds ENV PORT (default 3000); Koyeb injects PORT to match the service
+# port. Keep the args exactly "./bin/rails server" — the entrypoint's db:prepare
+# trigger string-matches them.
+EXPOSE 3000
+CMD ["./bin/rails", "server"]

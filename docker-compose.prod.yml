@@ -36,7 +36,7 @@ services:
       BIND_ADDR: 0.0.0.0:8080
       TILE_SERVICE_URL: http://tile:8080
       CATALOG_URL: http://catalog:8081
-      ACCOUNTS_URL: http://accounts:80
+      ACCOUNTS_URL: http://accounts:3000
       REDIS_ADDR: redis:6379
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (openssl rand -hex 32)}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
