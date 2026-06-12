@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "maplibre-gl": "^4.7.1",
-    "next": "15.3.3",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "next": "16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@types/geojson": "^7946.0.16",
