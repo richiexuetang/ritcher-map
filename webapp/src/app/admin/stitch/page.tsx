@@ -30,30 +30,28 @@ interface Cell {
 /**
  * Locate a tile in its grid.
  *
- * Preferred: a `{z}/{x}/{y}.ext` directory layout (standard XYZ pyramid, the
- * same layout the tiler emits) — read from the file's path, so an uploaded
- * folder tree is placed exactly. y increases downward in XYZ, which matches
- * canvas coordinates, so x→column / y→row is a direct mapping.
+ * Preferred: a directory layout where the trailing path is `{z}/{a}/{b}.ext`.
+ * Our tiler emits XYZ `{z}/{x}/{y}` (a=x=column, b=y=row, y top-down), but the
+ * legacy leaflet export used `{z}/{y}/{x}` — so the `order` toggle decides
+ * whether the two coordinate segments are (col,row) or (row,col). Getting it
+ * wrong transposes the map into a scrambled grid.
  *
  * Fallback: the LAST TWO integers in a flat filename ("tile_12_34.png",
- * "12,34.webp"), with a row/column order toggle for y_x exports. These get a
- * synthetic zoom 0 so they form a single level.
+ * "12,34.webp"), same order toggle. These get a synthetic zoom 0.
  */
 function parseTile(file: File, order: AxisOrder): Cell | null {
   const rel = file.webkitRelativePath || file.name;
   const segs = rel.split('/').filter(Boolean);
   if (segs.length >= 3) {
-    const yMatch = segs[segs.length - 1].match(/^(\d+)\.[^.]+$/);
-    const xSeg = segs[segs.length - 2];
+    const bMatch = segs[segs.length - 1].match(/^(\d+)\.[^.]+$/);
+    const aSeg = segs[segs.length - 2];
     const zSeg = segs[segs.length - 3];
-    if (yMatch && /^\d+$/.test(xSeg) && /^\d+$/.test(zSeg)) {
-      return {
-        file,
-        z: Number(zSeg),
-        col: Number(xSeg),
-        row: Number(yMatch[1]),
-        pyramid: true,
-      };
+    if (bMatch && /^\d+$/.test(aSeg) && /^\d+$/.test(zSeg)) {
+      const a = Number(aSeg); // 2nd-to-last segment
+      const b = Number(bMatch[1]); // filename number
+      return order === 'xy'
+        ? { file, z: Number(zSeg), col: a, row: b, pyramid: true }
+        : { file, z: Number(zSeg), col: b, row: a, pyramid: true };
     }
   }
   const nums = file.name.match(/\d+/g);
@@ -68,6 +66,7 @@ function parseTile(file: File, order: AxisOrder): Cell | null {
 export default function StitchPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [order, setOrder] = useState<AxisOrder>('xy');
+  const [flipY, setFlipY] = useState(false);
   const [selectedZoom, setSelectedZoom] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -149,6 +148,11 @@ export default function StitchPage() {
     }
     const cols = Math.max(...cells.map((c) => c.col)) + 1;
     const rows = Math.max(...cells.map((c) => c.row)) + 1;
+    // TMS / bottom-up sources number rows from the bottom; flip into top-down
+    // (canvas) order now that the row count is known.
+    if (flipY) {
+      for (const c of cells) c.row = rows - 1 - c.row;
+    }
     const seen = new Set(cells.map((c) => `${c.col},${c.row}`));
     let missing = 0;
     for (let x = 0; x < cols; x++) {
@@ -157,7 +161,7 @@ export default function StitchPage() {
       }
     }
     return { cells, cols, rows, missing };
-  }, [parsed, selectedZoom]);
+  }, [parsed, selectedZoom, flipY]);
 
   const onPick = (list: FileList | null) => {
     // Directory uploads include every file under the tree (manifests, .DS_Store
@@ -193,15 +197,18 @@ export default function StitchPage() {
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('canvas 2d context unavailable');
 
-      // Missing cells are left transparent — normal for pyramids (the tiler
-      // skips blank tiles), and re-tiling will skip them again.
+      // Place each tile at its NATURAL size at the cell origin (col*tw, row*th).
+      // Never scale to the first tile: a cropped/partial edge tile must keep
+      // its real size and leave the rest of its cell transparent, or the seam
+      // shifts. Missing cells stay transparent — normal for pyramids (the
+      // tiler skips blanks), and re-tiling skips them again.
       ctx.drawImage(first, grid.cells[0].col * tw, grid.cells[0].row * th);
       first.close();
       for (let i = 1; i < grid.cells.length; i++) {
         const cell = grid.cells[i];
         setBusy(`Stitching ${i + 1}/${grid.cells.length}…`);
         const bmp = await createImageBitmap(cell.file);
-        ctx.drawImage(bmp, cell.col * tw, cell.row * th, tw, th);
+        ctx.drawImage(bmp, cell.col * tw, cell.row * th);
         bmp.close();
       }
 
@@ -259,7 +266,10 @@ export default function StitchPage() {
         Upload a folder of tiles laid out as <code>{'{z}/{x}/{y}'}</code>{' '}
         (standard XYZ pyramid) — the highest zoom is stitched into one
         full-resolution PNG you can upload and re-tile. Flat filenames with the
-        last two numbers as coordinates also work.
+        last two numbers as coordinates also work. If the result looks
+        scrambled, the source uses the other axis order
+        (<code>{'{z}/{y}/{x}'}</code>, e.g. legacy leaflet tiles) — tick
+        “y before x” below.
       </p>
 
       <div className="rm-panel rm-admin-panel">
@@ -282,12 +292,25 @@ export default function StitchPage() {
           <input
             type="checkbox"
             checked={order === 'yx'}
-            disabled={parsed.pyramid}
             onChange={(e) => setOrder(e.target.checked ? 'yx' : 'xy')}
           />
           <span className="rm-cat-name">
-            Flat filenames are row_column (y before x)
-            {parsed.pyramid && ' — ignored for {z}/{x}/{y} folders'}
+            y before x —{' '}
+            {parsed.pyramid ? (
+              <code>{'{z}/{y}/{x}'}</code>
+            ) : (
+              'filenames are row_column'
+            )}
+          </span>
+        </label>
+        <label className="rm-cat-row">
+          <input
+            type="checkbox"
+            checked={flipY}
+            onChange={(e) => setFlipY(e.target.checked)}
+          />
+          <span className="rm-cat-name">
+            Flip Y (tiles numbered bottom-up / TMS)
           </span>
         </label>
 
