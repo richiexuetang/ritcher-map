@@ -46,7 +46,7 @@ pub fn cluster_markers(
         sum_x: f64,
         sum_y: f64,
         count: i64,
-        category: Option<i32>,
+        category: Option<i64>,
         mixed: bool,
     }
 
@@ -94,7 +94,7 @@ pub fn cluster_markers(
 mod tests {
     use super::*;
 
-    fn m(id: i64, cat: i32, x: f64, y: f64) -> Marker {
+    fn m(id: i64, cat: i64, x: f64, y: f64) -> Marker {
         Marker {
             id,
             category_id: cat,

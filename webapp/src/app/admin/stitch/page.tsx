@@ -15,33 +15,60 @@ import type { MapResponse } from '@/lib/types';
 const MAX_SIDE = 16384;
 const MAX_AREA = 268_435_456;
 
+const IMAGE_RE = /\.(png|webp|jpe?g|gif)$/i;
+
 type AxisOrder = 'xy' | 'yx';
 
 interface Cell {
   file: File;
-  col: number;
-  row: number;
+  z: number; // zoom level; flat (non-pyramid) tiles get a synthetic 0
+  col: number; // x
+  row: number; // y
+  pyramid: boolean;
 }
 
 /**
- * Grid position from a filename: the LAST TWO integers in the name are the
- * coordinates (so "9_12_34.png", "tile-12-34.webp", "12,34.png" and
- * "z9/x12/y34" flattened to "9_12_34" all work). Axis order is a user toggle
- * since both x_y and y_x conventions are common.
+ * Locate a tile in its grid.
+ *
+ * Preferred: a `{z}/{x}/{y}.ext` directory layout (standard XYZ pyramid, the
+ * same layout the tiler emits) — read from the file's path, so an uploaded
+ * folder tree is placed exactly. y increases downward in XYZ, which matches
+ * canvas coordinates, so x→column / y→row is a direct mapping.
+ *
+ * Fallback: the LAST TWO integers in a flat filename ("tile_12_34.png",
+ * "12,34.webp"), with a row/column order toggle for y_x exports. These get a
+ * synthetic zoom 0 so they form a single level.
  */
-function parseCell(file: File, order: AxisOrder): Cell | null {
+function parseTile(file: File, order: AxisOrder): Cell | null {
+  const rel = file.webkitRelativePath || file.name;
+  const segs = rel.split('/').filter(Boolean);
+  if (segs.length >= 3) {
+    const yMatch = segs[segs.length - 1].match(/^(\d+)\.[^.]+$/);
+    const xSeg = segs[segs.length - 2];
+    const zSeg = segs[segs.length - 3];
+    if (yMatch && /^\d+$/.test(xSeg) && /^\d+$/.test(zSeg)) {
+      return {
+        file,
+        z: Number(zSeg),
+        col: Number(xSeg),
+        row: Number(yMatch[1]),
+        pyramid: true,
+      };
+    }
+  }
   const nums = file.name.match(/\d+/g);
   if (!nums || nums.length < 2) return null;
   const a = Number(nums[nums.length - 2]);
   const b = Number(nums[nums.length - 1]);
   return order === 'xy'
-    ? { file, col: a, row: b }
-    : { file, col: b, row: a };
+    ? { file, z: 0, col: a, row: b, pyramid: false }
+    : { file, z: 0, col: b, row: a, pyramid: false };
 }
 
 export default function StitchPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [order, setOrder] = useState<AxisOrder>('xy');
+  const [selectedZoom, setSelectedZoom] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,15 +100,47 @@ export default function StitchPage() {
     };
   }, [result]);
 
-  const grid = useMemo(() => {
-    const cells: Cell[] = [];
+  // Parse every file, bucket by zoom level.
+  const parsed = useMemo(() => {
+    const byZoom = new Map<number, Cell[]>();
     const skipped: string[] = [];
+    let pyramid = false;
     for (const f of files) {
-      const c = parseCell(f, order);
-      if (c) cells.push(c);
-      else skipped.push(f.name);
+      const c = parseTile(f, order);
+      if (!c) {
+        skipped.push(f.webkitRelativePath || f.name);
+        continue;
+      }
+      if (c.pyramid) pyramid = true;
+      const arr = byZoom.get(c.z) ?? [];
+      arr.push(c);
+      byZoom.set(c.z, arr);
     }
-    if (cells.length === 0) return null;
+    const zooms = [...byZoom.keys()].sort((a, b) => a - b);
+    return { byZoom, zooms, skipped, pyramid, total: files.length };
+  }, [files, order]);
+
+  // Default to the highest zoom (full resolution); keep the user's pick if it
+  // still exists after a re-upload.
+  useEffect(() => {
+    if (parsed.zooms.length === 0) {
+      setSelectedZoom(null);
+      return;
+    }
+    setSelectedZoom((prev) =>
+      prev !== null && parsed.zooms.includes(prev)
+        ? prev
+        : parsed.zooms[parsed.zooms.length - 1],
+    );
+  }, [parsed]);
+
+  // The grid for the selected level: normalize coords to the min so a level
+  // that doesn't start at (0,0) still lays out from the top-left.
+  const grid = useMemo(() => {
+    if (selectedZoom === null) return null;
+    const src = parsed.byZoom.get(selectedZoom);
+    if (!src || src.length === 0) return null;
+    const cells = src.map((c) => ({ ...c }));
     const minCol = Math.min(...cells.map((c) => c.col));
     const minRow = Math.min(...cells.map((c) => c.row));
     for (const c of cells) {
@@ -97,8 +156,14 @@ export default function StitchPage() {
         if (!seen.has(`${x},${y}`)) missing++;
       }
     }
-    return { cells, cols, rows, missing, skipped };
-  }, [files, order]);
+    return { cells, cols, rows, missing };
+  }, [parsed, selectedZoom]);
+
+  const onPick = (list: FileList | null) => {
+    // Directory uploads include every file under the tree (manifests, .DS_Store
+    // …); keep only images so parsing/skip-reporting isn't polluted.
+    setFiles([...(list ?? [])].filter((f) => IMAGE_RE.test(f.name)));
+  };
 
   const stitch = async () => {
     if (!grid) return;
@@ -114,8 +179,11 @@ export default function StitchPage() {
       const outW = grid.cols * tw;
       const outH = grid.rows * th;
       if (outW > MAX_SIDE || outH > MAX_SIDE || outW * outH > MAX_AREA) {
+        first.close();
         throw new Error(
-          `stitched size ${outW}×${outH} exceeds browser canvas limits (max ${MAX_SIDE}px/side, ~268M pixels) — stitch in sections instead`,
+          `stitched size ${outW}×${outH} exceeds browser canvas limits ` +
+            `(max ${MAX_SIDE}px/side, ~268M pixels) — pick a lower zoom level ` +
+            `or stitch in sections`,
         );
       }
 
@@ -125,6 +193,8 @@ export default function StitchPage() {
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('canvas 2d context unavailable');
 
+      // Missing cells are left transparent — normal for pyramids (the tiler
+      // skips blank tiles), and re-tiling will skip them again.
       ctx.drawImage(first, grid.cells[0].col * tw, grid.cells[0].row * th);
       first.close();
       for (let i = 1; i < grid.cells.length; i++) {
@@ -186,35 +256,78 @@ export default function StitchPage() {
     <>
       <h1 className="rm-page-title">Stitch tiles into a map image</h1>
       <p className="rm-page-sub">
-        Select a grid of equally-sized tile images (coordinates read from the
-        last two numbers in each filename), stitch them into one PNG, then
-        upload it and start tiling.
+        Upload a folder of tiles laid out as <code>{'{z}/{x}/{y}'}</code>{' '}
+        (standard XYZ pyramid) — the highest zoom is stitched into one
+        full-resolution PNG you can upload and re-tile. Flat filenames with the
+        last two numbers as coordinates also work.
       </p>
 
       <div className="rm-panel rm-admin-panel">
-        <div className="rm-panel-title">1 · Tiles</div>
+        <div className="rm-panel-title">1 · Tile folder</div>
         <input
           type="file"
           accept="image/*"
           multiple
-          onChange={(e) => setFiles([...(e.target.files ?? [])])}
+          // Non-standard attrs (not in React's input typings) enable directory
+          // selection; set imperatively so each File keeps its webkitRelativePath.
+          ref={(el) => {
+            if (el) {
+              el.setAttribute('webkitdirectory', '');
+              el.setAttribute('directory', '');
+            }
+          }}
+          onChange={(e) => onPick(e.target.files)}
         />
         <label className="rm-cat-row">
           <input
             type="checkbox"
             checked={order === 'yx'}
+            disabled={parsed.pyramid}
             onChange={(e) => setOrder(e.target.checked ? 'yx' : 'xy')}
           />
           <span className="rm-cat-name">
-            Filenames are row_column (y before x)
+            Flat filenames are row_column (y before x)
+            {parsed.pyramid && ' — ignored for {z}/{x}/{y} folders'}
           </span>
         </label>
+
+        {parsed.total > 0 && parsed.zooms.length === 0 && (
+          <div className="rm-admin-dim">
+            No tiles recognized — expected a {'{z}/{x}/{y}'} folder or filenames
+            ending in two numbers.
+          </div>
+        )}
+
+        {parsed.zooms.length > 1 && (
+          <label className="rm-admin-form-row">
+            <span className="rm-admin-dim">Zoom level</span>
+            <select
+              className="rm-select"
+              value={selectedZoom ?? ''}
+              onChange={(e) => setSelectedZoom(Number(e.target.value))}
+            >
+              {parsed.zooms
+                .slice()
+                .reverse()
+                .map((z) => (
+                  <option key={z} value={z}>
+                    z{z} — {parsed.byZoom.get(z)?.length ?? 0} tiles
+                    {z === parsed.zooms[parsed.zooms.length - 1]
+                      ? ' (highest)'
+                      : ''}
+                  </option>
+                ))}
+            </select>
+          </label>
+        )}
+
         {grid && (
           <div className="rm-admin-dim">
+            {parsed.pyramid && selectedZoom !== null && `z${selectedZoom}: `}
             {grid.cells.length} tiles → {grid.cols}×{grid.rows} grid
-            {grid.missing > 0 && ` · ${grid.missing} empty cells`}
-            {grid.skipped.length > 0 &&
-              ` · skipped (no coordinates): ${grid.skipped.slice(0, 3).join(', ')}${grid.skipped.length > 3 ? '…' : ''}`}
+            {grid.missing > 0 && ` · ${grid.missing} blank cells`}
+            {parsed.skipped.length > 0 &&
+              ` · skipped ${parsed.skipped.length} non-tile file(s)`}
           </div>
         )}
         <button

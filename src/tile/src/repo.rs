@@ -8,7 +8,7 @@
 //! CREATE TABLE markers (
 //!   id          BIGSERIAL PRIMARY KEY,
 //!   map_id      BIGINT NOT NULL,
-//!   category_id INT    NOT NULL,
+//!   category_id BIGINT NOT NULL,   -- FK to categories.id (BIGSERIAL): decode as i64
 //!   title       TEXT,
 //!   -- pixel-space point; SRID 0 = "no CRS", which is correct for game maps
 //!   geom        geometry(Point, 0) NOT NULL
@@ -190,7 +190,9 @@ impl MarkerRepo for PgMarkerRepo {
 #[derive(sqlx::FromRow)]
 struct MarkerRow {
     id: i64,
-    category_id: i32,
+    // BIGINT column — decoding into i32 is what made the endpoint 500 once any
+    // marker row existed (sqlx will not silently narrow int8 -> i32).
+    category_id: i64,
     x: f64,
     y: f64,
     title: Option<String>,
