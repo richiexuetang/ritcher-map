@@ -46,4 +46,4 @@ prost = "0.13"
 # prost-build turns that into Rust. protox 0.8 is the line built on prost 0.13;
 # 0.9+ requires prost 0.14, which would split prost-types from prost-build 0.13.
 prost-build = "0.13"
-protox = "0.8.0"
+protox = "0.9.1"
