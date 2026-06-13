@@ -13,7 +13,7 @@ import type {
 import { tileTemplateUrl } from '../api/client';
 import { TILE_SIZE } from '../config';
 import type { MapResponse, ViewportResponse } from '../types';
-import { imageBounds, pixelToLngLat } from './crs';
+import { imageBounds, lngLatToPixel, pixelToLngLat } from './crs';
 import { buildLayers, MARKER_SOURCE_ID } from './layers';
 import { viewportToGeoJSON, type AnyProps } from './markers';
 import { useViewportMarkers } from './useViewportMarkers';
@@ -27,6 +27,13 @@ export interface MapViewProps {
   onMarkerClick: (markerId: number) => void;
   /** Pixel-space point to fly the camera to; bump `key` to retrigger. */
   focus?: { x: number; y: number; key: number } | null;
+  /**
+   * Click on the bare map (not on a marker), in pixel space. Admin console
+   * uses this for click-to-place marker authoring.
+   */
+  onMapClick?: (point: { x: number; y: number }) => void;
+  /** Bump to force a viewport-marker refetch (after authoring mutations). */
+  markersVersion?: number;
 }
 
 const MARKER_LAYER_ID = 'rm-marker-points';
@@ -111,15 +118,19 @@ export const MapView: React.FC<MapViewProps> = ({
   hideFound = false,
   onMarkerClick,
   focus = null,
+  onMapClick,
+  markersVersion = 0,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   // Re-render once the map instance exists so the viewport hook receives it.
   const [mapInstance, setMapInstance] = useState<MapLibreMap | null>(null);
 
-  // Keep the latest onMarkerClick without re-binding the click handler.
+  // Keep the latest callbacks without re-binding the click handlers.
   const onClickRef = useRef(onMarkerClick);
   onClickRef.current = onMarkerClick;
+  const onMapClickRef = useRef(onMapClick);
+  onMapClickRef.current = onMapClick;
 
   const ready = isReady(meta);
 
@@ -143,6 +154,16 @@ export const MapView: React.FC<MapViewProps> = ({
     map.addControl(new maplibregl.NavigationControl({}), 'top-left');
     mapRef.current = map;
     setMapInstance(map);
+    if (process.env.NODE_ENV !== 'production') {
+      // Dev-only debugging handle (e.g. __rmMap.getStyle() in the console).
+      const w = window as unknown as { __rmMap?: unknown; __rmMapErrors?: string[] };
+      w.__rmMap = map;
+      w.__rmMapErrors = w.__rmMapErrors ?? [];
+      map.on('error', (e) => {
+        w.__rmMapErrors?.push(String(e.error?.message ?? e.error ?? 'unknown'));
+        console.error('[rm-map error]', e.error?.message);
+      });
+    }
 
     const popup = new maplibregl.Popup({
       closeButton: false,
@@ -174,11 +195,28 @@ export const MapView: React.FC<MapViewProps> = ({
       popup.remove();
     };
 
+    // Background clicks (not on a marker) report pixel-space coordinates.
+    // The marker layer's own click handler still fires for marker hits; the
+    // queryRenderedFeatures guard keeps this one from double-reporting them.
+    const onBgClick = (e: MapLayerMouseEvent): void => {
+      if (!onMapClickRef.current) return;
+      // queryRenderedFeatures THROWS for a layer the style hasn't loaded yet,
+      // and clicks can land before 'load' — treat that as "no marker hit".
+      const hits = map.getLayer(MARKER_LAYER_ID)
+        ? map.queryRenderedFeatures(e.point, { layers: [MARKER_LAYER_ID] })
+        : [];
+      if (hits.length > 0) return;
+      const px = lngLatToPixel(e.lngLat.lng, e.lngLat.lat, maxZoom);
+      onMapClickRef.current({ x: px.x, y: px.y });
+    };
+
     map.on('click', MARKER_LAYER_ID, onClick);
     map.on('mouseenter', MARKER_LAYER_ID, onEnter);
     map.on('mouseleave', MARKER_LAYER_ID, onLeave);
+    map.on('click', onBgClick);
 
     return () => {
+      map.off('click', onBgClick);
       map.off('click', MARKER_LAYER_ID, onClick);
       map.off('mouseenter', MARKER_LAYER_ID, onEnter);
       map.off('mouseleave', MARKER_LAYER_ID, onLeave);
@@ -195,6 +233,7 @@ export const MapView: React.FC<MapViewProps> = ({
     ready ? meta.id : null,
     meta.maxZoom,
     categories,
+    markersVersion,
   );
 
   // Push viewport response + found state into the GeoJSON source.

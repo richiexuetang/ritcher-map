@@ -71,7 +71,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!getAuthToken()) return;
     try {
       const me = await getMe();
-      setUser({ id: me.id, email: me.email, premium: me.premium });
+      setUser({
+        id: me.id,
+        email: me.email,
+        premium: me.premium,
+        admin: me.admin === true,
+      });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         logout();
@@ -98,7 +103,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const me = await getMe();
         if (!cancelled) {
-          setUser({ id: me.id, email: me.email, premium: me.premium });
+          setUser({
+            id: me.id,
+            email: me.email,
+            premium: me.premium,
+            admin: me.admin === true,
+          });
         }
       } catch (err) {
         if (cancelled) return;

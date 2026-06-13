@@ -27,6 +27,8 @@ export function useViewportMarkers(
   mapId: number | null,
   maxZoom: number | null,
   categories: number[] | null,
+  /** Bump to force a refetch (e.g. after the admin console mutates markers). */
+  version = 0,
 ): ViewportState {
   const [response, setResponse] = useState<ViewportResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -108,7 +110,7 @@ export function useViewportMarkers(
     };
     // categoriesKey stands in for the `categories` array identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, mapId, maxZoom, categoriesKey]);
+  }, [map, mapId, maxZoom, categoriesKey, version]);
 
   return { response, loading, error };
 }
