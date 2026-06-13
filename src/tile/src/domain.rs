@@ -39,7 +39,9 @@ impl BBox {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Marker {
     pub id: i64,
-    pub category_id: i32,
+    // BIGINT in the catalog schema (categories.id is BIGSERIAL) — must be i64,
+    // not i32, or sqlx refuses to decode the row and the endpoint 500s.
+    pub category_id: i64,
     pub x: f64,
     pub y: f64,
     pub title: Option<String>,
@@ -55,7 +57,7 @@ pub struct Cluster {
     /// Number of markers this cluster stands in for.
     pub count: i64,
     /// Category, if the cluster is homogeneous; `None` when it mixes categories.
-    pub category_id: Option<i32>,
+    pub category_id: Option<i64>,
 }
 
 /// Discriminated response: either expanded markers or aggregated clusters.
@@ -85,8 +87,8 @@ pub struct ViewportQuery {
     pub map_id: i64,
     pub bbox: BBox,
     pub zoom: i32,
-    /// Empty = all categories.
-    pub categories: Vec<i32>,
+    /// Empty = all categories. i64 to match the BIGINT category_id column.
+    pub categories: Vec<i64>,
 }
 
 /// Tunables for when/how the read path clusters.

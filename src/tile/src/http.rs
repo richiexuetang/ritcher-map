@@ -96,8 +96,9 @@ fn parse_bbox(s: &str) -> Result<BBox, ApiError> {
     Ok(b)
 }
 
-/// Parse an optional comma-separated category id list.
-fn parse_categories(s: &Option<String>) -> Result<Vec<i32>, ApiError> {
+/// Parse an optional comma-separated category id list. i64 to match the
+/// BIGINT category_id column (the filter binds these as int8[] for `= ANY`).
+fn parse_categories(s: &Option<String>) -> Result<Vec<i64>, ApiError> {
     let Some(s) = s else { return Ok(Vec::new()) };
     if s.trim().is_empty() {
         return Ok(Vec::new());
@@ -105,7 +106,7 @@ fn parse_categories(s: &Option<String>) -> Result<Vec<i32>, ApiError> {
     s.split(',')
         .map(|p| {
             p.trim()
-                .parse::<i32>()
+                .parse::<i64>()
                 .map_err(|_| ApiError::BadRequest(format!("bad category id: {p:?}")))
         })
         .collect()
@@ -256,14 +257,14 @@ mod tests {
 
     #[test]
     fn parse_categories_variants() {
-        assert_eq!(parse_categories(&None).unwrap(), Vec::<i32>::new());
+        assert_eq!(parse_categories(&None).unwrap(), Vec::<i64>::new());
         assert_eq!(
             parse_categories(&Some("".into())).unwrap(),
-            Vec::<i32>::new()
+            Vec::<i64>::new()
         );
         assert_eq!(
             parse_categories(&Some("1,2,3".into())).unwrap(),
-            vec![1, 2, 3]
+            vec![1i64, 2, 3]
         );
         assert!(parse_categories(&Some("1,x".into())).is_err());
     }
