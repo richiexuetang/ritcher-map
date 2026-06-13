@@ -39,7 +39,7 @@ async-trait = "0.1"
 # need: catalog publishes small, uncompressed protobuf messages.
 rskafka = { version = "0.6.0", default-features = false }
 # Generated CatalogChanged type (see build.rs). prost 0.13 to match prost-build.
-prost = "0.13"
+prost = "0.14"
 
 [build-dependencies]
 # Pure-Rust proto codegen: protox parses .proto -> FileDescriptorSet (no protoc),
