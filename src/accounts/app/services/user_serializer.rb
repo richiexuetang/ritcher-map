@@ -4,7 +4,8 @@ class UserSerializer
     {
       id: user.id,
       email: user.email,
-      premium: user.premium?
+      premium: user.premium?,
+      admin: user.admin?
     }
   end
 end
