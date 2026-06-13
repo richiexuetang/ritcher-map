@@ -15,7 +15,7 @@ gem "bootsnap", require: false
 
 gem "bcrypt", "~> 3.1"   # has_secure_password
 gem "jwt", "~> 2.8"      # session tokens (must match the gateway's HS256 contract)
-gem "stripe", "~> 12.0"  # billing
+gem "stripe", "~> 19.2"  # billing
 
 group :development, :test do
   gem "debug", platforms: %i[mri windows]
