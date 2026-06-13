@@ -10,6 +10,8 @@
 #     gateway gates free-tier limits on this flag (premium users bypass them), so
 #     it must match the REST `premium` boolean exactly — both derive from
 #     User#premium? (the single source of truth). See auth.v1.SessionClaims.
+#   - a bool  `admin` claim = users.admin. The gateway gates catalog writes
+#     (the CMS surface) on this flag; it must match the REST `admin` boolean.
 # Keep this in lockstep with gateway/internal/auth. If you change the algorithm
 # or claim names here, change them there too.
 class JwtService
@@ -25,7 +27,8 @@ class JwtService
         exp: now + ttl.to_i,
         # Same rule the REST layer uses for `premium` (User#premium?). Coerce to a
         # real bool and never crash if the user has no subscription (=> false).
-        premium: user.premium? ? true : false
+        premium: user.premium? ? true : false,
+        admin: user.admin? ? true : false
       }
       JWT.encode(payload, secret, ALGORITHM)
     end

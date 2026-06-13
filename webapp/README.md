@@ -30,6 +30,29 @@ pnpm dev
 
 `pnpm test` runs the CRS math tests; `pnpm typecheck` runs tsc.
 
+## Admin console (`/admin`)
+
+CMS for the catalog: create games/maps, categories, click-the-map marker
+placement, bulk import, image upload + tiling kickoff, and a tile-stitching
+tool. Requires an admin account: catalog writes are gated at the gateway on
+the JWT `admin` claim — grant it with `bin/rails accounts:grant_admin
+EMAIL=…` on the accounts service, then log in again.
+
+Image uploads go browser → R2 via presigned PUT (`/api/admin/presign`),
+which needs server-side env (not `NEXT_PUBLIC_`):
+
+```
+R2_ACCOUNT_ID=…           # Cloudflare account id
+R2_ACCESS_KEY_ID=…        # R2 API token (S3 auth) credentials
+R2_SECRET_ACCESS_KEY=…
+R2_UPLOAD_BUCKET=ritcher-map   # optional, this is the default
+```
+
+The uploads bucket must allow cross-origin PUT from this app's origin —
+e.g. `wrangler r2 bucket cors set ritcher-map --file cors.json` with rules
+`{"AllowedOrigins": [origins], "AllowedMethods": ["PUT"], "AllowedHeaders":
+["content-type"]}`.
+
 ## Not ported yet (no backend support)
 
 Guides/checklists, notes, favorites, region polygons, Google OAuth,

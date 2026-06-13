@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "aws4fetch": "^1.0.20",
     "maplibre-gl": "^4.7.1",
     "next": "16.2.9",
     "react": "^19.2.7",

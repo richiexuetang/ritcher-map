@@ -101,6 +101,8 @@ export interface AccountUser {
   id: string;
   email: string;
   premium: boolean;
+  /** CMS operator (users.admin). Gates catalog writes at the gateway. */
+  admin: boolean;
 }
 
 export interface AuthResponse {
@@ -119,6 +121,7 @@ export interface MeResponse {
   id: string;
   email: string;
   premium: boolean;
+  admin: boolean;
   subscription: SubscriptionInfo | null;
 }
 
