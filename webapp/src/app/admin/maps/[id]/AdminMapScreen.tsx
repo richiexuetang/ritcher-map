@@ -25,6 +25,7 @@ import {
   type CatalogMarker,
 } from '@/lib/api/maps';
 import { resolveIconUrl } from '@/lib/icons';
+import { MarkdownEditor } from '@/lib/markdown/MarkdownEditor';
 import { CategoryIcon } from '@/lib/panels/CategoryIcon';
 import type { CategoryResponse, MapResponse } from '@/lib/types';
 
@@ -161,7 +162,7 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
     setError(null);
     setIconUploading(true);
     try {
-      const grant = await presignUpload(file.name);
+      const grant = await presignUpload(file.name, 'tiles');
       await uploadToPresignedUrl(grant.url, file);
       const url = resolveIconUrl(grant.key);
       setCatIcon(url ?? grant.key);
@@ -425,12 +426,17 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                   value={mTitle}
                   onChange={(e) => setMTitle(e.target.value)}
                 />
-                <textarea
-                  className="rm-input"
-                  placeholder="description (optional)"
-                  rows={3}
+                <MarkdownEditor
                   value={mDesc}
-                  onChange={(e) => setMDesc(e.target.value)}
+                  onChange={setMDesc}
+                  onError={setError}
+                  markers={markers
+                    .filter(
+                      (m) =>
+                        selection.kind !== 'edit' ||
+                        m.id !== selection.marker.id,
+                    )
+                    .map((m) => ({ id: m.id, title: m.title }))}
                 />
                 <div className="rm-admin-form-row">
                   <input

@@ -668,7 +668,187 @@ a.rm-map-card:hover {
   line-height: 1.5;
   color: var(--rm-text);
   margin: 0;
-  white-space: pre-wrap;
+}
+
+/* --- Rendered Markdown (marker descriptions) ------------------------------------ */
+
+.rm-markdown {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--rm-text);
+  overflow-wrap: anywhere;
+}
+
+.rm-markdown > :first-child {
+  margin-top: 0;
+}
+
+.rm-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.rm-markdown p,
+.rm-markdown ul,
+.rm-markdown ol,
+.rm-markdown blockquote,
+.rm-markdown pre,
+.rm-markdown table {
+  margin: 0 0 10px;
+}
+
+.rm-markdown h1,
+.rm-markdown h2,
+.rm-markdown h3,
+.rm-markdown h4 {
+  margin: 14px 0 6px;
+  line-height: 1.25;
+}
+
+.rm-markdown h1 { font-size: 18px; }
+.rm-markdown h2 { font-size: 16px; }
+.rm-markdown h3 { font-size: 15px; }
+
+.rm-markdown a {
+  color: var(--rm-accent);
+  text-decoration: underline;
+}
+
+.rm-markdown ul,
+.rm-markdown ol {
+  padding-left: 20px;
+}
+
+.rm-markdown code {
+  font-family: var(--rm-mono, ui-monospace, monospace);
+  font-size: 0.9em;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.rm-markdown pre {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.rm-markdown pre code {
+  background: none;
+  padding: 0;
+}
+
+.rm-markdown blockquote {
+  border-left: 3px solid var(--rm-panel-border);
+  padding-left: 10px;
+  color: var(--rm-text-dim, #9aa0a6);
+}
+
+.rm-md-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 4px 0 10px;
+}
+
+/* Responsive 16:9 wrapper for embedded players (iframe) and uploaded video. */
+.rm-embed {
+  display: block;
+  margin: 4px 0 10px;
+}
+
+.rm-embed-iframe {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.rm-embed-iframe iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 8px;
+}
+
+.rm-embed-video video {
+  display: block;
+  width: 100%;
+  max-height: 60vh;
+  border-radius: 8px;
+  background: #000;
+}
+
+/* --- Markdown editor (admin) --------------------------------------------------- */
+
+.rm-md-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rm-md-toolbar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.rm-btn-sm {
+  padding: 3px 9px;
+  font-size: 12px;
+}
+
+.rm-btn-active {
+  background: var(--rm-accent);
+  color: #0b0d10;
+}
+
+.rm-md-textarea {
+  resize: vertical;
+  min-height: 96px;
+  font-family: var(--rm-mono, ui-monospace, monospace);
+  font-size: 13px;
+}
+
+.rm-md-preview {
+  border: 1px solid var(--rm-panel-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 96px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.rm-md-marker-select {
+  font-size: 12px;
+  padding: 3px 8px;
+  max-width: 180px;
+}
+
+/* In-description reference to another marker — inline action, not a navigation. */
+.rm-marker-link {
+  display: inline;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--rm-accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.rm-marker-link::before {
+  content: '\1F4CD'; /* 📍 round pushpin — signals an in-map jump */
+  margin-right: 3px;
+  font-size: 0.9em;
+  text-decoration: none;
+}
+
+.rm-marker-link:hover {
+  color: var(--rm-text);
 }
 
 .rm-detail-found {

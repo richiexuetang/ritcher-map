@@ -115,7 +115,9 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ bucket, urls });
   }
 
-  // --- single mode: generated key under uploads/ ---
+  // --- single mode: generated key ---
+  // 'tiles' target -> public bucket under media/ (browser-served marker media,
+  // category icons); default -> private uploads bucket (tiler source images).
   const rawName = typeof body?.filename === 'string' ? body.filename : '';
   if (!rawName) {
     return Response.json({ error: 'filename or keys[] required' }, { status: 400 });
@@ -125,8 +127,11 @@ export async function POST(req: Request): Promise<Response> {
       .toLowerCase()
       .replace(/[^a-z0-9._-]+/g, '-')
       .replace(/^[-.]+|[-.]+$/g, '') || 'upload';
-  const key = `uploads/${crypto.randomUUID()}/${safeName}`;
-  const url = await sign(uploadBucket, key);
+  const toTiles = body?.target === 'tiles';
+  const bucket = toTiles ? tilesBucket : uploadBucket;
+  const prefix = toTiles ? 'media' : 'uploads';
+  const key = `${prefix}/${crypto.randomUUID()}/${safeName}`;
+  const url = await sign(bucket, key);
 
-  return Response.json({ bucket: uploadBucket, key, url });
+  return Response.json({ bucket, key, url });
 }

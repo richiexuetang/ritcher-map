@@ -185,8 +185,16 @@ async function presignFetch<T>(payload: unknown): Promise<T> {
   return body as T;
 }
 
-export function presignUpload(filename: string): Promise<PresignedUpload> {
-  return presignFetch<PresignedUpload>({ filename });
+/**
+ * Sign a PUT for a single file. `target: 'tiles'` puts it in the PUBLIC bucket
+ * under `media/…` (browser-served marker media / icons); the default 'uploads'
+ * is the private source-image bucket the tiler reads.
+ */
+export function presignUpload(
+  filename: string,
+  target: 'uploads' | 'tiles' = 'uploads',
+): Promise<PresignedUpload> {
+  return presignFetch<PresignedUpload>({ filename, target });
 }
 
 export interface PresignedKey {

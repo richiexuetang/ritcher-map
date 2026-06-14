@@ -107,7 +107,8 @@ public final class Dtos {
             @NotNull Double x,
             @NotNull Double y,
             @Size(max = 200) String title,
-            @Size(max = 4000) String description
+            // Markdown body (rich text + image/video embeds); generous cap.
+            @Size(max = 50000) String description
     ) {}
 
     public record MarkerResponse(
