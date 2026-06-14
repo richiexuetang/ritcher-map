@@ -23,9 +23,7 @@ export function SiteHeader() {
                 Admin
               </Link>
             )}
-            <Link href="/account" className="rm-user-email">
-              {user?.email ?? 'Account'}
-            </Link>
+            <span className="rm-user-email">{user?.email}</span>
             <button type="button" className="rm-btn" onClick={logout}>
               Log out
             </button>
