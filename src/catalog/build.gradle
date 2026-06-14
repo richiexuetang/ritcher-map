@@ -35,7 +35,7 @@ repositories {
 // protoc and protobuf-java are pinned to the SAME version so generated code and
 // the runtime always match.
 // ---------------------------------------------------------------------------
-def protobufVersion = '3.25.5'
+def protobufVersion = '4.35.1'
 // Local/CI: default to the repo's shared proto tree (../../proto). Containers
 // supply it at an explicit absolute path via -PprotoDir=/proto (the relative
 // "../../proto" traversal normalizes inconsistently from the image's /app dir).
@@ -161,9 +161,9 @@ dependencies {
 	// Tests
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.kafka:spring-kafka-test")
-	testImplementation("org.testcontainers:junit-jupiter:1.20.3")
-	testImplementation("org.testcontainers:postgresql:1.20.3")
-	testImplementation("org.testcontainers:kafka:1.20.3")
+	testImplementation("org.testcontainers:junit-jupiter:1.21.4")
+	testImplementation("org.testcontainers:postgresql:1.21.4")
+	testImplementation("org.testcontainers:kafka:1.21.4")
 }
 
 tasks.named('test') {
