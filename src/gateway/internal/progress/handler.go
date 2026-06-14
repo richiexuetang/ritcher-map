@@ -18,14 +18,10 @@ type publisher interface {
 type Handler struct {
 	store *Store
 	pub   publisher
-
-	// freeTierLimit is the max markers a non-premium user may have found per
-	// map. 0 (or negative) means unlimited.
-	freeTierLimit int
 }
 
-func NewHandler(store *Store, pub publisher, freeTierLimit int) *Handler {
-	return &Handler{store: store, pub: pub, freeTierLimit: freeTierLimit}
+func NewHandler(store *Store, pub publisher) *Handler {
+	return &Handler{store: store, pub: pub}
 }
 
 // updateRequest is the POST body: toggle one marker's found state.
@@ -93,24 +89,6 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	if err != nil || markerID <= 0 {
 		http.Error(w, `{"error":"marker_id required"}`, http.StatusBadRequest)
 		return
-	}
-
-	// Free-tier enforcement: only when marking found, only for non-premium
-	// users, and only when a positive limit is configured. A marker already in
-	// the set is a no-op toggle and never blocked.
-	if req.Found && h.freeTierLimit > 0 {
-		premium, _ := auth.Premium(r.Context())
-		if !premium {
-			count, err := h.store.Count(r.Context(), userID, mapID)
-			if err != nil {
-				http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
-				return
-			}
-			if count >= int64(h.freeTierLimit) && !h.store.Has(r.Context(), userID, mapID, markerID) {
-				http.Error(w, `{"error":"free tier marker limit reached"}`, http.StatusPaymentRequired)
-				return
-			}
-		}
 	}
 
 	var changed bool

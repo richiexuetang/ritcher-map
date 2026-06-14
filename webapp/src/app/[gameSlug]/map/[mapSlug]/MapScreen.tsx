@@ -226,9 +226,6 @@ export function MapScreen({
           <div className="rm-panel rm-auth-panel">
             <div className="rm-user-row">
               <span className="rm-user-email">{user?.email}</span>
-              {user?.premium && (
-                <span className="rm-premium-badge">Premium</span>
-              )}
               <button type="button" className="rm-btn" onClick={logout}>
                 Log out
               </button>

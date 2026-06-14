@@ -18,11 +18,10 @@ func mintToken(t *testing.T, admin bool) string {
 	t.Helper()
 	now := time.Now()
 	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub":     "user-1",
-		"iat":     now.Unix(),
-		"exp":     now.Add(time.Hour).Unix(),
-		"premium": false,
-		"admin":   admin,
+		"sub":   "user-1",
+		"iat":   now.Unix(),
+		"exp":   now.Add(time.Hour).Unix(),
+		"admin": admin,
 	})
 	s, err := tok.SignedString(testSecret)
 	if err != nil {

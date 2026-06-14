@@ -1,5 +1,5 @@
 import { apiSend, apiGet } from './client';
-import type { AuthResponse, MeResponse, CheckoutResponse } from '../types';
+import type { AuthResponse, MeResponse } from '../types';
 
 /** Public login (200). */
 export function login(email: string, password: string): Promise<AuthResponse> {
@@ -14,9 +14,4 @@ export function register(email: string, password: string): Promise<AuthResponse>
 /** Current account (authed). */
 export function getMe(): Promise<MeResponse> {
   return apiGet<MeResponse>('/account/me', { auth: true });
-}
-
-/** Start a billing checkout (authed; 503 if unconfigured). */
-export function startCheckout(): Promise<CheckoutResponse> {
-  return apiSend<CheckoutResponse>('POST', '/billing/checkout', {}, { auth: true });
 }

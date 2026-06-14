@@ -14,20 +14,18 @@ var (
 
 // Claims is the subset of the session token we rely on. The accounts service
 // puts the user id in the standard `sub` claim and includes `exp`. The custom
-// `premium` claim marks paid users and `admin` marks CMS operators; both are
-// absent on older tokens and default to false (zero value), keeping
-// validation backward compatible.
+// `admin` claim marks CMS operators; it is absent on older tokens and defaults
+// to false (zero value), keeping validation backward compatible.
 type Claims struct {
 	jwt.RegisteredClaims
-	Premium bool `json:"premium"`
-	Admin   bool `json:"admin"`
+	Admin bool `json:"admin"`
 }
 
 // Validate parses and verifies an HS256 token and returns the user id (`sub`)
-// plus the premium and admin flags. Missing/absent flags yield false.
-func Validate(tokenString string, secret []byte) (userID string, premium, admin bool, err error) {
+// plus the admin flag. A missing/absent flag yields false.
+func Validate(tokenString string, secret []byte) (userID string, admin bool, err error) {
 	if tokenString == "" {
-		return "", false, false, ErrMissingToken
+		return "", false, ErrMissingToken
 	}
 
 	token, err := jwt.ParseWithClaims(
@@ -43,12 +41,12 @@ func Validate(tokenString string, secret []byte) (userID string, premium, admin 
 		jwt.WithExpirationRequired(),
 	)
 	if err != nil || !token.Valid {
-		return "", false, false, ErrInvalidToken
+		return "", false, ErrInvalidToken
 	}
 
 	claims, ok := token.Claims.(*Claims)
 	if !ok || claims.Subject == "" {
-		return "", false, false, ErrInvalidToken
+		return "", false, ErrInvalidToken
 	}
-	return claims.Subject, claims.Premium, claims.Admin, nil
+	return claims.Subject, claims.Admin, nil
 }

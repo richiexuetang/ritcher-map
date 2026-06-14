@@ -7,61 +7,22 @@ import {
   requestTiling,
   uploadToPresignedUrl,
 } from '@/lib/api/admin';
+import {
+  buildGrid,
+  buildImportPlan,
+  keepImages,
+  parseTiles,
+  type AxisOrder,
+} from '@/lib/admin/pyramid';
+import { useDirectImport } from '@/lib/admin/useDirectImport';
 import { listMaps } from '@/lib/api/maps';
 import type { MapResponse } from '@/lib/types';
 
 // Browsers cap canvases around 16384px per side / ~268M pixels total; past
-// that drawing silently fails, so refuse up front instead.
+// that drawing silently fails, so the single-image stitch refuses up front.
+// Direct import has no such limit — it never assembles one image.
 const MAX_SIDE = 16384;
 const MAX_AREA = 268_435_456;
-
-const IMAGE_RE = /\.(png|webp|jpe?g|gif)$/i;
-
-type AxisOrder = 'xy' | 'yx';
-
-interface Cell {
-  file: File;
-  z: number; // zoom level; flat (non-pyramid) tiles get a synthetic 0
-  col: number; // x
-  row: number; // y
-  pyramid: boolean;
-}
-
-/**
- * Locate a tile in its grid.
- *
- * Preferred: a directory layout where the trailing path is `{z}/{a}/{b}.ext`.
- * Our tiler emits XYZ `{z}/{x}/{y}` (a=x=column, b=y=row, y top-down), but the
- * legacy leaflet export used `{z}/{y}/{x}` — so the `order` toggle decides
- * whether the two coordinate segments are (col,row) or (row,col). Getting it
- * wrong transposes the map into a scrambled grid.
- *
- * Fallback: the LAST TWO integers in a flat filename ("tile_12_34.png",
- * "12,34.webp"), same order toggle. These get a synthetic zoom 0.
- */
-function parseTile(file: File, order: AxisOrder): Cell | null {
-  const rel = file.webkitRelativePath || file.name;
-  const segs = rel.split('/').filter(Boolean);
-  if (segs.length >= 3) {
-    const bMatch = segs[segs.length - 1].match(/^(\d+)\.[^.]+$/);
-    const aSeg = segs[segs.length - 2];
-    const zSeg = segs[segs.length - 3];
-    if (bMatch && /^\d+$/.test(aSeg) && /^\d+$/.test(zSeg)) {
-      const a = Number(aSeg); // 2nd-to-last segment
-      const b = Number(bMatch[1]); // filename number
-      return order === 'xy'
-        ? { file, z: Number(zSeg), col: a, row: b, pyramid: true }
-        : { file, z: Number(zSeg), col: b, row: a, pyramid: true };
-    }
-  }
-  const nums = file.name.match(/\d+/g);
-  if (!nums || nums.length < 2) return null;
-  const a = Number(nums[nums.length - 2]);
-  const b = Number(nums[nums.length - 1]);
-  return order === 'xy'
-    ? { file, z: 0, col: a, row: b, pyramid: false }
-    : { file, z: 0, col: b, row: a, pyramid: false };
-}
 
 export default function StitchPage() {
   const [files, setFiles] = useState<File[]>([]);
@@ -88,6 +49,15 @@ export default function StitchPage() {
   const [targetMap, setTargetMap] = useState('');
   const [tiled, setTiled] = useState<MapResponse | null>(null);
 
+  const {
+    importTarget,
+    setImportTarget,
+    importing,
+    importPct,
+    imported,
+    runImport,
+  } = useDirectImport(setError);
+
   useEffect(() => {
     listMaps().then(setMaps).catch(() => {});
   }, []);
@@ -99,25 +69,7 @@ export default function StitchPage() {
     };
   }, [result]);
 
-  // Parse every file, bucket by zoom level.
-  const parsed = useMemo(() => {
-    const byZoom = new Map<number, Cell[]>();
-    const skipped: string[] = [];
-    let pyramid = false;
-    for (const f of files) {
-      const c = parseTile(f, order);
-      if (!c) {
-        skipped.push(f.webkitRelativePath || f.name);
-        continue;
-      }
-      if (c.pyramid) pyramid = true;
-      const arr = byZoom.get(c.z) ?? [];
-      arr.push(c);
-      byZoom.set(c.z, arr);
-    }
-    const zooms = [...byZoom.keys()].sort((a, b) => a - b);
-    return { byZoom, zooms, skipped, pyramid, total: files.length };
-  }, [files, order]);
+  const parsed = useMemo(() => parseTiles(files, order), [files, order]);
 
   // Default to the highest zoom (full resolution); keep the user's pick if it
   // still exists after a re-upload.
@@ -133,40 +85,19 @@ export default function StitchPage() {
     );
   }, [parsed]);
 
-  // The grid for the selected level: normalize coords to the min so a level
-  // that doesn't start at (0,0) still lays out from the top-left.
-  const grid = useMemo(() => {
-    if (selectedZoom === null) return null;
-    const src = parsed.byZoom.get(selectedZoom);
-    if (!src || src.length === 0) return null;
-    const cells = src.map((c) => ({ ...c }));
-    const minCol = Math.min(...cells.map((c) => c.col));
-    const minRow = Math.min(...cells.map((c) => c.row));
-    for (const c of cells) {
-      c.col -= minCol;
-      c.row -= minRow;
-    }
-    const cols = Math.max(...cells.map((c) => c.col)) + 1;
-    const rows = Math.max(...cells.map((c) => c.row)) + 1;
-    // TMS / bottom-up sources number rows from the bottom; flip into top-down
-    // (canvas) order now that the row count is known.
-    if (flipY) {
-      for (const c of cells) c.row = rows - 1 - c.row;
-    }
-    const seen = new Set(cells.map((c) => `${c.col},${c.row}`));
-    let missing = 0;
-    for (let x = 0; x < cols; x++) {
-      for (let y = 0; y < rows; y++) {
-        if (!seen.has(`${x},${y}`)) missing++;
-      }
-    }
-    return { cells, cols, rows, missing };
-  }, [parsed, selectedZoom, flipY]);
+  const grid = useMemo(
+    () => buildGrid(parsed.byZoom, selectedZoom, flipY),
+    [parsed, selectedZoom, flipY],
+  );
+
+  const importPlan = useMemo(
+    () =>
+      parsed.pyramid ? buildImportPlan(parsed.byZoom, parsed.zooms, flipY) : null,
+    [parsed, flipY],
+  );
 
   const onPick = (list: FileList | null) => {
-    // Directory uploads include every file under the tree (manifests, .DS_Store
-    // …); keep only images so parsing/skip-reporting isn't polluted.
-    setFiles([...(list ?? [])].filter((f) => IMAGE_RE.test(f.name)));
+    setFiles(keepImages([...(list ?? [])]));
   };
 
   const stitch = async () => {
@@ -186,8 +117,8 @@ export default function StitchPage() {
         first.close();
         throw new Error(
           `stitched size ${outW}×${outH} exceeds browser canvas limits ` +
-            `(max ${MAX_SIDE}px/side, ~268M pixels) — pick a lower zoom level ` +
-            `or stitch in sections`,
+            `(max ${MAX_SIDE}px/side, ~268M pixels) — use "Import directly" ` +
+            `above, or pick a lower zoom level`,
         );
       }
 
@@ -200,8 +131,7 @@ export default function StitchPage() {
       // Place each tile at its NATURAL size at the cell origin (col*tw, row*th).
       // Never scale to the first tile: a cropped/partial edge tile must keep
       // its real size and leave the rest of its cell transparent, or the seam
-      // shifts. Missing cells stay transparent — normal for pyramids (the
-      // tiler skips blanks), and re-tiling skips them again.
+      // shifts. Missing cells stay transparent — normal for pyramids.
       ctx.drawImage(first, grid.cells[0].col * tw, grid.cells[0].row * th);
       first.close();
       for (let i = 1; i < grid.cells.length; i++) {
@@ -261,15 +191,15 @@ export default function StitchPage() {
 
   return (
     <>
-      <h1 className="rm-page-title">Stitch tiles into a map image</h1>
+      <h1 className="rm-page-title">Import or stitch a tile pyramid</h1>
       <p className="rm-page-sub">
         Upload a folder of tiles laid out as <code>{'{z}/{x}/{y}'}</code>{' '}
-        (standard XYZ pyramid) — the highest zoom is stitched into one
-        full-resolution PNG you can upload and re-tile. Flat filenames with the
-        last two numbers as coordinates also work. If the result looks
+        (standard XYZ pyramid). <strong>Import directly</strong> uploads every
+        tile straight to a map&apos;s tile storage and marks it READY — no size
+        limit, no re-tiling. Or <strong>stitch</strong> one level into a single
+        PNG to re-tile (capped by the browser canvas size). If the layout looks
         scrambled, the source uses the other axis order
-        (<code>{'{z}/{y}/{x}'}</code>, e.g. legacy leaflet tiles) — tick
-        “y before x” below.
+        (<code>{'{z}/{y}/{x}'}</code>, e.g. legacy leaflet) — tick “y before x”.
       </p>
 
       <div className="rm-panel rm-admin-panel">
@@ -320,7 +250,90 @@ export default function StitchPage() {
             ending in two numbers.
           </div>
         )}
+        {parsed.zooms.length > 0 && (
+          <div className="rm-admin-dim">
+            {parsed.total} files ·{' '}
+            {parsed.pyramid
+              ? `${parsed.zooms.length} zoom level(s): z${parsed.zooms[0]}–z${parsed.zooms[parsed.zooms.length - 1]}`
+              : 'flat (single level)'}
+            {parsed.skipped.length > 0 &&
+              ` · skipped ${parsed.skipped.length} non-tile file(s)`}
+          </div>
+        )}
+        {error && <p className="rm-error rm-error-inline">{error}</p>}
+      </div>
 
+      {importPlan && (
+        <div className="rm-panel rm-admin-panel">
+          <div className="rm-panel-title">2 · Import directly (recommended)</div>
+          <p className="rm-admin-dim">
+            Upload all {importPlan.total} tiles across {importPlan.levels.length}{' '}
+            level(s) (z0–z{importPlan.maxZoom}) to the target map&apos;s tile
+            storage, then mark it READY. No image is assembled, so there is no
+            canvas-size limit. JPEG tiles are converted to WebP; partial edge
+            tiles are padded to square.
+            {!importPlan.zeroBased && (
+              <>
+                {' '}
+                <strong>
+                  ⚠ lowest level is z{importPlan.levels[0].z}, not z0 —
+                  zoomed-out tiles will be blank until lower levels exist.
+                </strong>
+              </>
+            )}
+          </p>
+          <div className="rm-admin-form-row">
+            <select
+              className="rm-select"
+              value={importTarget}
+              onChange={(e) => setImportTarget(e.target.value)}
+            >
+              <option value="" disabled>
+                target map…
+              </option>
+              {maps.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.prefix} — {m.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="rm-btn rm-btn-primary"
+              onClick={() => runImport(importPlan, maps)}
+              disabled={importTarget === '' || importing !== null}
+            >
+              {importing ?? `Import ${importPlan.total} tiles`}
+            </button>
+          </div>
+          {importPct !== null && (
+            <div className="rm-progressbar">
+              <div
+                className="rm-progressbar-fill"
+                style={{ width: `${importPct}%` }}
+              />
+            </div>
+          )}
+          {imported && (
+            <p className="rm-admin-dim">
+              Imported — {imported.width}×{imported.height}, z0–
+              {imported.maxZoom}.{' '}
+              <Link href={`/admin/maps/${imported.id}`}>{imported.prefix}</Link>{' '}
+              is now READY.
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="rm-panel rm-admin-panel">
+        <div className="rm-panel-title">
+          Or · stitch one level into an image
+        </div>
+        <p className="rm-admin-dim">
+          Reassembles a single zoom level into one PNG to upload and re-tile.
+          Fine for small maps; large levels exceed the browser canvas limit
+          (~16384px/side) — use “Import directly” instead.
+        </p>
         {parsed.zooms.length > 1 && (
           <label className="rm-admin-form-row">
             <span className="rm-admin-dim">Zoom level</span>
@@ -343,31 +356,27 @@ export default function StitchPage() {
             </select>
           </label>
         )}
-
         {grid && (
           <div className="rm-admin-dim">
             {parsed.pyramid && selectedZoom !== null && `z${selectedZoom}: `}
             {grid.cells.length} tiles → {grid.cols}×{grid.rows} grid
             {grid.missing > 0 && ` · ${grid.missing} blank cells`}
-            {parsed.skipped.length > 0 &&
-              ` · skipped ${parsed.skipped.length} non-tile file(s)`}
           </div>
         )}
         <button
           type="button"
-          className="rm-btn rm-btn-primary"
+          className="rm-btn"
           onClick={stitch}
           disabled={!grid || busy !== null}
         >
           {busy ?? 'Stitch'}
         </button>
-        {error && <p className="rm-error rm-error-inline">{error}</p>}
       </div>
 
       {result && (
         <div className="rm-panel rm-admin-panel">
           <div className="rm-panel-title">
-            2 · Result — {result.width}×{result.height} (
+            Stitched image — {result.width}×{result.height} (
             {(result.blob.size / 1024 / 1024).toFixed(1)} MB)
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -377,11 +386,7 @@ export default function StitchPage() {
             className="rm-stitch-preview"
           />
           <div className="rm-admin-form-row">
-            <a
-              className="rm-btn"
-              href={result.url}
-              download="stitched.png"
-            >
+            <a className="rm-btn" href={result.url} download="stitched.png">
               Download PNG
             </a>
             <button
@@ -398,7 +403,7 @@ export default function StitchPage() {
 
       {uploadedKey && (
         <div className="rm-panel rm-admin-panel">
-          <div className="rm-panel-title">3 · Tile it</div>
+          <div className="rm-panel-title">Tile the stitched image</div>
           <div className="rm-admin-dim">
             Uploaded as <code>{uploadedKey.bucket}/{uploadedKey.key}</code>
           </div>

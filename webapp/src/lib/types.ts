@@ -94,13 +94,12 @@ export interface ProgressUpdateRequest {
 }
 
 // ----------------------------------------------------------------------------
-// accounts: /auth/*, /account/me, /billing/checkout  (snake_case)
+// accounts: /auth/*, /account/me  (snake_case)
 // ----------------------------------------------------------------------------
 
 export interface AccountUser {
   id: string;
   email: string;
-  premium: boolean;
   /** CMS operator (users.admin). Gates catalog writes at the gateway. */
   admin: boolean;
 }
@@ -110,23 +109,10 @@ export interface AuthResponse {
   user: AccountUser;
 }
 
-export type SubscriptionStatus = 'free' | 'active' | 'past_due' | 'canceled';
-
-export interface SubscriptionInfo {
-  status: SubscriptionStatus;
-  current_period_end: string | null;
-}
-
 export interface MeResponse {
   id: string;
   email: string;
-  premium: boolean;
   admin: boolean;
-  subscription: SubscriptionInfo | null;
-}
-
-export interface CheckoutResponse {
-  checkout_url: string;
 }
 
 // ----------------------------------------------------------------------------

@@ -34,7 +34,7 @@ type Deps struct {
 //	  /tiles/...                            -> tile-service (Rust)   public
 //	  /maps/{mapId}/markers                 -> tile-service (Rust)   public (viewport read)
 //	  /api/v1/maps,categories,markers ...   -> catalog (Java)        GET public, writes admin
-//	  /auth/..., /account/..., /billing/... -> accounts (Rails)
+//	  /auth/..., /account/...               -> accounts (Rails)
 //
 // The local /api/v1/progress/{mapId} pattern is more specific than the proxied
 // /api/v1/maps/ etc., and "maps|categories|markers" never collide with
@@ -102,7 +102,6 @@ func New(d Deps) (http.Handler, error) {
 	}
 	mux.Handle("/auth/", accountsProxy)
 	mux.Handle("/account/", accountsProxy)
-	mux.Handle("/billing/", accountsProxy)
 
 	// CORS wraps everything: the gateway is the single origin-policy authority,
 	// so backends (Rails/Java/Rust) never see preflights or need CORS of their own.

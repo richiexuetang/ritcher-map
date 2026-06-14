@@ -11,11 +11,4 @@ Rails.application.routes.draw do
   namespace :account do
     get "me", to: "profiles#show"
   end
-
-  # Billing. /billing/checkout is authenticated; /billing/webhook is called by
-  # Stripe directly and verified by signature.
-  namespace :billing do
-    post "checkout", to: "checkouts#create"
-    post "webhook",  to: "webhooks#create"
-  end
 end

@@ -10,7 +10,6 @@ type ctxKey int
 
 const (
 	userIDKey ctxKey = iota
-	premiumKey
 	adminKey
 )
 
@@ -26,19 +25,18 @@ func TokenFromRequest(r *http.Request) string {
 	return r.URL.Query().Get("token")
 }
 
-// Middleware verifies the token and stores the user id plus the premium and
-// admin flags in the request context. Unauthenticated requests get 401 and
-// never reach the handler.
+// Middleware verifies the token and stores the user id plus the admin flag in
+// the request context. Unauthenticated requests get 401 and never reach the
+// handler.
 func Middleware(secret []byte) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			userID, premium, admin, err := Validate(TokenFromRequest(r), secret)
+			userID, admin, err := Validate(TokenFromRequest(r), secret)
 			if err != nil {
 				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 				return
 			}
 			ctx := context.WithValue(r.Context(), userIDKey, userID)
-			ctx = context.WithValue(ctx, premiumKey, premium)
 			ctx = context.WithValue(ctx, adminKey, admin)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -62,13 +60,6 @@ func RequireAdmin(next http.Handler) http.Handler {
 func UserID(ctx context.Context) (string, bool) {
 	id, ok := ctx.Value(userIDKey).(string)
 	return id, ok && id != ""
-}
-
-// Premium returns whether the authenticated session is premium. ok is false
-// when no premium flag was set on the context (e.g. unauthenticated request).
-func Premium(ctx context.Context) (premium bool, ok bool) {
-	p, ok := ctx.Value(premiumKey).(bool)
-	return p, ok
 }
 
 // Admin returns whether the authenticated session is an admin. ok is false
