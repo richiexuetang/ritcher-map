@@ -12,9 +12,15 @@ import type {
 
 import { tileTemplateUrl } from '../api/client';
 import { TILE_SIZE } from '../config';
+import { categoryIconSpriteId } from '../icons';
 import type { MapResponse, ViewportResponse } from '../types';
 import { imageBounds, lngLatToPixel, pixelToLngLat } from './crs';
-import { buildLayers, MARKER_SOURCE_ID } from './layers';
+import {
+  buildLayers,
+  MARKER_LAYER_ID,
+  MARKER_SOURCE_ID,
+  MARKER_SYMBOL_LAYER_ID,
+} from './layers';
 import { viewportToGeoJSON, type AnyProps } from './markers';
 import { useViewportMarkers } from './useViewportMarkers';
 
@@ -34,9 +40,18 @@ export interface MapViewProps {
   onMapClick?: (point: { x: number; y: number }) => void;
   /** Bump to force a viewport-marker refetch (after authoring mutations). */
   markersVersion?: number;
+  /**
+   * categoryId -> resolved icon URL. Markers in these categories render as the
+   * icon image once it loads; everything else stays a colored circle.
+   */
+  categoryIcons?: ReadonlyMap<number, string>;
 }
 
-const MARKER_LAYER_ID = 'rm-marker-points';
+/** Both marker layers are clickable / hoverable. */
+const MARKER_INTERACTIVE_LAYERS = [MARKER_LAYER_ID, MARKER_SYMBOL_LAYER_ID];
+
+/** Longest icon edge (px) markers render at; sprites are scaled to this. */
+const ICON_TARGET_PX = 28;
 
 const EMPTY_FC: GeoJSON.FeatureCollection<GeoJSON.Point, AnyProps> = {
   type: 'FeatureCollection',
@@ -120,11 +135,19 @@ export const MapView: React.FC<MapViewProps> = ({
   focus = null,
   onMapClick,
   markersVersion = 0,
+  categoryIcons,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   // Re-render once the map instance exists so the viewport hook receives it.
   const [mapInstance, setMapInstance] = useState<MapLibreMap | null>(null);
+
+  // Per-map-instance icon state: which category sprites are loaded (so we can
+  // tag markers as symbols) and which are mid-load (de-dupes loadImage calls).
+  const loadedIconCats = useRef<Set<number>>(new Set());
+  const loadingIcons = useRef<Set<string>>(new Set());
+  // Bumped when a sprite finishes loading, to re-tag/redraw the marker source.
+  const [iconsVersion, setIconsVersion] = useState(0);
 
   // Keep the latest callbacks without re-binding the click handlers.
   const onClickRef = useRef(onMarkerClick);
@@ -201,25 +224,31 @@ export const MapView: React.FC<MapViewProps> = ({
     const onBgClick = (e: MapLayerMouseEvent): void => {
       if (!onMapClickRef.current) return;
       // queryRenderedFeatures THROWS for a layer the style hasn't loaded yet,
-      // and clicks can land before 'load' — treat that as "no marker hit".
-      const hits = map.getLayer(MARKER_LAYER_ID)
-        ? map.queryRenderedFeatures(e.point, { layers: [MARKER_LAYER_ID] })
+      // and clicks can land before 'load' — query only layers that exist and
+      // treat the rest as "no marker hit".
+      const present = MARKER_INTERACTIVE_LAYERS.filter((l) => map.getLayer(l));
+      const hits = present.length
+        ? map.queryRenderedFeatures(e.point, { layers: present })
         : [];
       if (hits.length > 0) return;
       const px = lngLatToPixel(e.lngLat.lng, e.lngLat.lat, maxZoom);
       onMapClickRef.current({ x: px.x, y: px.y });
     };
 
-    map.on('click', MARKER_LAYER_ID, onClick);
-    map.on('mouseenter', MARKER_LAYER_ID, onEnter);
-    map.on('mouseleave', MARKER_LAYER_ID, onLeave);
+    for (const layer of MARKER_INTERACTIVE_LAYERS) {
+      map.on('click', layer, onClick);
+      map.on('mouseenter', layer, onEnter);
+      map.on('mouseleave', layer, onLeave);
+    }
     map.on('click', onBgClick);
 
     return () => {
       map.off('click', onBgClick);
-      map.off('click', MARKER_LAYER_ID, onClick);
-      map.off('mouseenter', MARKER_LAYER_ID, onEnter);
-      map.off('mouseleave', MARKER_LAYER_ID, onLeave);
+      for (const layer of MARKER_INTERACTIVE_LAYERS) {
+        map.off('click', layer, onClick);
+        map.off('mouseenter', layer, onEnter);
+        map.off('mouseleave', layer, onLeave);
+      }
       popup.remove();
       mapRef.current = null;
       setMapInstance(null);
@@ -236,6 +265,54 @@ export const MapView: React.FC<MapViewProps> = ({
     markersVersion,
   );
 
+  // Sprites live on a specific map instance; drop the loaded-set when the map
+  // is (re)created so we don't tag markers with sprites the new map lacks.
+  useEffect(() => {
+    loadedIconCats.current = new Set();
+    loadingIcons.current = new Set();
+    setIconsVersion(0);
+  }, [mapInstance]);
+
+  // Load each category's icon image into the map as a named sprite. On success
+  // we record the category and bump iconsVersion so the apply effect re-tags
+  // those markers as symbols; failures (404/CORS) leave them as circles.
+  useEffect(() => {
+    const map = mapInstance;
+    if (!map || !categoryIcons || categoryIcons.size === 0) return;
+    let cancelled = false;
+
+    const loadAll = (): void => {
+      for (const [catId, url] of categoryIcons) {
+        const spriteId = categoryIconSpriteId(catId);
+        if (map.hasImage(spriteId) || loadingIcons.current.has(spriteId)) continue;
+        loadingIcons.current.add(spriteId);
+        map
+          .loadImage(url)
+          .then(({ data }) => {
+            loadingIcons.current.delete(spriteId);
+            if (cancelled || map.hasImage(spriteId)) return;
+            // Normalize wildly different source sizes to ~ICON_TARGET_PX.
+            const natural = Math.max(data.width, data.height) || ICON_TARGET_PX;
+            const pixelRatio = Math.max(1, natural / ICON_TARGET_PX);
+            map.addImage(spriteId, data, { pixelRatio });
+            loadedIconCats.current.add(catId);
+            setIconsVersion((v) => v + 1);
+          })
+          .catch(() => {
+            loadingIcons.current.delete(spriteId);
+          });
+      }
+    };
+
+    if (map.isStyleLoaded()) loadAll();
+    else map.once('load', loadAll);
+
+    return () => {
+      cancelled = true;
+      map.off('load', loadAll);
+    };
+  }, [mapInstance, categoryIcons]);
+
   // Push viewport response + found state into the GeoJSON source.
   useEffect(() => {
     const map = mapRef.current;
@@ -248,6 +325,7 @@ export const MapView: React.FC<MapViewProps> = ({
         vp.response ?? EMPTY_RESPONSE,
         meta.maxZoom ?? 0,
         found,
+        loadedIconCats.current,
       );
       src.setData(
         hideFound
@@ -275,7 +353,7 @@ export const MapView: React.FC<MapViewProps> = ({
       map.off('load', apply);
       map.off('idle', apply);
     };
-  }, [vp.response, found, hideFound, meta.maxZoom]);
+  }, [vp.response, found, hideFound, meta.maxZoom, iconsVersion]);
 
   // Fly to a requested marker (search hit / external selection).
   useEffect(() => {

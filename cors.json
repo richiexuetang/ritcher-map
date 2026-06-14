@@ -1,0 +1,15 @@
+{
+    "rules": [
+        {
+            "allowed": {
+                "origins": [
+                    "https://ritcher-map.vercel.app/"
+                ],
+                "methods": [
+                    "GET",
+                    "PUT"
+                ]
+            }
+        }
+    ]
+}

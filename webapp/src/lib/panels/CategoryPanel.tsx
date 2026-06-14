@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import type { CategoryResponse } from '../types';
-import { categoryColor } from '../map/layers';
+import { CategoryIcon } from './CategoryIcon';
 
 export interface CategoryPanelProps {
   categories: CategoryResponse[];
@@ -90,11 +90,7 @@ export const CategoryPanel: React.FC<CategoryPanelProps> = ({
           checked={isSelected}
           onChange={() => onToggle(category.id)}
         />
-        <span
-          className="rm-swatch"
-          style={{ background: categoryColor(category.id) }}
-          aria-hidden="true"
-        />
+        <CategoryIcon icon={category.icon} categoryId={category.id} />
         <span className="rm-cat-name">{category.name}</span>
       </label>
     );
