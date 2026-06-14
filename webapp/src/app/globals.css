@@ -118,6 +118,23 @@
   .cat-icon {
     @apply flex-none rounded-[2px] object-contain;
   }
+  /* Built-in glyph rendered as a category-colored disc + white glyph (the glyph
+     svg is white and used as a mask), mirroring the map marker. */
+  .cat-pin {
+    @apply inline-flex flex-none items-center justify-center rounded-full
+      shadow-[0_0_0_1px_rgba(0,0,0,0.3)_inset];
+  }
+  .cat-pin-glyph {
+    @apply block bg-white;
+    width: 60%;
+    height: 60%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+  }
 
   .progressbar {
     @apply h-1.5 w-full overflow-hidden rounded-full bg-white/10;

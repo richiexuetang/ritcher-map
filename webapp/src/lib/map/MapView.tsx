@@ -17,6 +17,7 @@ import type { MapResponse, ViewportResponse } from '../types';
 import { imageBounds, lngLatToPixel, pixelToLngLat } from './crs';
 import {
   buildLayers,
+  categoryColor,
   MARKER_LAYER_ID,
   MARKER_SOURCE_ID,
   MARKER_SYMBOL_LAYER_ID,
@@ -55,13 +56,24 @@ const ICON_TARGET_PX = 28;
 /** Rasterize sprites at 2x for crispness on hi-dpi screens. */
 const ICON_PIXEL_RATIO = 2;
 
+/** Root-relative path prefix of our built-in glyph library. */
+const BUILTIN_ICON_PREFIX = '/icons/categories/';
+
 /**
  * Rasterize an icon URL to ImageData for `map.addImage`. Uses an <img> + canvas
  * (not `map.loadImage`, whose createImageBitmap path can't decode SVG) so both
  * SVG and raster icons work; the icon is fit, centered, into a square so all
  * categories render at a uniform size regardless of source aspect/dimensions.
+ *
+ * When `pinColor` is set (our built-in white glyph-only SVGs), the glyph is
+ * composited onto a filled disc in that color — a category-tinted "pin + white
+ * glyph" marker (MapGenie-style). When null (custom uploaded icons, which may be
+ * full-color) the image is drawn as-is with no disc, preserving prior behavior.
  */
-function rasterizeIcon(url: string): Promise<ImageData> {
+function rasterizeIcon(
+  url: string,
+  pinColor: string | null,
+): Promise<ImageData> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous'; // cross-origin icons need GET CORS, else taint
@@ -72,9 +84,26 @@ function rasterizeIcon(url: string): Promise<ImageData> {
       canvas.height = size;
       const ctx = canvas.getContext('2d');
       if (!ctx) return reject(new Error('no 2d context'));
+
+      // Fraction of the sprite the source image occupies. A pinned glyph is
+      // inset so it sits inside the disc with margin; a bare icon fills the box.
+      const fit = pinColor ? 0.56 : 1;
+
+      if (pinColor) {
+        const r = size / 2 - ICON_PIXEL_RATIO; // leave room for the stroke
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, r, 0, Math.PI * 2);
+        ctx.fillStyle = pinColor;
+        ctx.fill();
+        ctx.lineWidth = ICON_PIXEL_RATIO;
+        ctx.strokeStyle = 'rgba(0,0,0,0.30)';
+        ctx.stroke();
+      }
+
       const iw = img.naturalWidth || size;
       const ih = img.naturalHeight || size;
-      const scale = Math.min(size / iw, size / ih);
+      const box = size * fit;
+      const scale = Math.min(box / iw, box / ih);
       const w = iw * scale;
       const h = ih * scale;
       ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
@@ -326,7 +355,11 @@ export const MapView: React.FC<MapViewProps> = ({
         // Rasterize via <img>+canvas rather than map.loadImage: that path uses
         // createImageBitmap, which can't decode SVG (our built-in icons). This
         // handles SVG and raster uniformly, normalized to a square sprite.
-        rasterizeIcon(url)
+        // Built-in glyphs get a category-colored disc; custom icons render as-is.
+        const pinColor = url.startsWith(BUILTIN_ICON_PREFIX)
+          ? categoryColor(catId)
+          : null;
+        rasterizeIcon(url, pinColor)
           .then((data) => {
             loadingIcons.current.delete(spriteId);
             if (cancelled || map.hasImage(spriteId)) return;

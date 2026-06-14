@@ -16,9 +16,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { gameSlug } = await params;
   const game = await fetchGame(gameSlug);
   const title = game?.title ?? gameTitle(gameSlug);
+  const description = `All ${title} maps — locations, collectibles and progress tracking.`;
+  const url = `/${gameSlug}`;
+  const image = resolveAssetUrl(game?.thumbnailUrl ?? null);
   return {
     title: `${title} Interactive Map`,
-    description: `All ${title} maps — locations, collectibles and progress tracking.`,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: `${title} Interactive Map`,
+      description,
+      url,
+      ...(image ? { images: [image] } : {}),
+    },
   };
 }
 
