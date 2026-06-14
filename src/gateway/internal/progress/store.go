@@ -55,20 +55,4 @@ func (s *Store) Found(ctx context.Context, userID, mapID string) ([]int64, error
 	}
 	return ids, nil
 }
-
-// Count returns how many markers a user has found on a map.
-func (s *Store) Count(ctx context.Context, userID, mapID string) (int64, error) {
-	return s.rdb.SCard(ctx, key(userID, mapID)).Result()
-}
-
-// Has reports whether a marker is already in the user's found set for a map.
-// A Redis error is treated as "not present" so the free-tier check fails open
-// to the limit rather than mistakenly allowing an over-limit add.
-func (s *Store) Has(ctx context.Context, userID, mapID string, markerID int64) bool {
-	ok, err := s.rdb.SIsMember(ctx, key(userID, mapID), strconv.FormatInt(markerID, 10)).Result()
-	if err != nil {
-		return false
-	}
-	return ok
-}
  

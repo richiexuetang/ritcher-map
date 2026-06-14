@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -13,7 +12,7 @@ type Config struct {
 	// Backend service base URLs to reverse-proxy to.
 	TileServiceURL string // Rust read path (tiles + viewport queries)
 	CatalogURL     string // Java write path / CMS
-	AccountsURL    string // Rails users + billing
+	AccountsURL    string // Rails users / auth
 
 	RedisAddr     string
 	RedisPassword string
@@ -24,11 +23,6 @@ type Config struct {
 
 	// Allowed Origins for browser WebSocket/CORS. "*" disables the check (dev only).
 	AllowedOrigins []string
-
-	// FreeTierMaxMarkersPerMap is the maximum number of markers a NON-premium
-	// user may have marked-found on a single map. 0 (or negative) means
-	// unlimited; >0 enforces the cap (premium users are never capped).
-	FreeTierMaxMarkersPerMap int
 }
 
 func Load() (Config, error) {
@@ -40,8 +34,6 @@ func Load() (Config, error) {
 		RedisAddr:      getenv("REDIS_ADDR", "localhost:6379"),
 		RedisPassword:  os.Getenv("REDIS_PASSWORD"),
 		AllowedOrigins: splitCSV(getenv("ALLOWED_ORIGINS", "http://localhost:5173")),
-
-		FreeTierMaxMarkersPerMap: getenvInt("FREE_TIER_MAX_MARKERS_PER_MAP", 0),
 	}
 
 	secret := os.Getenv("JWT_SECRET")
@@ -58,20 +50,6 @@ func getenv(key, def string) string {
 		return v
 	}
 	return def
-}
-
-// getenvInt reads an integer env var, falling back to def when unset or
-// unparseable.
-func getenvInt(key string, def int) int {
-	v := os.Getenv(key)
-	if v == "" {
-		return def
-	}
-	n, err := strconv.Atoi(v)
-	if err != nil {
-		return def
-	}
-	return n
 }
 
 func splitCSV(s string) []string {

@@ -58,4 +58,20 @@ public class MapController {
                 maps.requestTiling(id, req.sourceBucket(), req.sourceKey(), req.format())
         );
     }
+
+    /**
+     * Editor imported a pre-built {@code {z}/{x}/{y}} tile pyramid straight to
+     * tile storage (no source image, no worker run). Mark the map READY with
+     * the supplied dimensions.
+     */
+    @PostMapping("/{id}/imported")
+    public Dtos.MapResponse markImported(@PathVariable long id,
+                                         @Valid @RequestBody Dtos.MarkImportedRequest req) {
+        return Dtos.MapResponse.from(
+                maps.markImported(
+                        id, req.width(), req.height(), req.maxZoom(),
+                        req.tileSize() != null ? req.tileSize() : 256,
+                        req.format() != null ? req.format() : "webp")
+        );
+    }
 }

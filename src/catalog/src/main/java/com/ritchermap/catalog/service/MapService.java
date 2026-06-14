@@ -108,6 +108,23 @@ public class MapService {
     }
 
     /**
+     * Editor imported a pre-built {@code {z}/{x}/{y}} pyramid directly into tile
+     * storage (no source image, no tiling worker run). Apply the supplied
+     * dimensions and go READY — the same end state as {@link #completeTiling},
+     * but driven by an admin HTTP call instead of a Kafka completion event.
+     * Returns the entity so the controller can echo the updated map.
+     */
+    @Transactional
+    public GameMap markImported(long id, long width, long height, int maxZoom,
+                                int tileSize, String format) {
+        GameMap m = get(id);
+        m.markReady(width, height, maxZoom, tileSize, format);
+        springEvents.publishEvent(mapChanged(id, CatalogChanged.Action.ACTION_UPDATED));
+        log.info("map id={} marked imported: {}x{} z0..{} format={}", id, width, height, maxZoom, format);
+        return m;
+    }
+
+    /**
      * Called by the {@code map.tiling.completed} listener. Idempotent so a
      * duplicate completion message (Kafka at-least-once) doesn't fail.
      */

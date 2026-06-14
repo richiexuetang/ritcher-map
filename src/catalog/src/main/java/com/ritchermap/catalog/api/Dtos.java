@@ -7,6 +7,8 @@ import com.ritchermap.catalog.domain.MapStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
@@ -37,6 +39,19 @@ public final class Dtos {
             @NotBlank String sourceBucket,
             @NotBlank String sourceKey,
             String format     // optional; defaults to webp
+    ) {}
+
+    /**
+     * Editor uploaded a pre-built {@code {z}/{x}/{y}} pyramid straight to tile
+     * storage (no source image to tile). Carries the dimensions the worker
+     * would otherwise have computed so the map can go READY directly.
+     */
+    public record MarkImportedRequest(
+            @NotNull @Positive Long width,
+            @NotNull @Positive Long height,
+            @NotNull @PositiveOrZero Integer maxZoom,
+            @Positive Integer tileSize,   // optional; defaults to 256
+            String format                 // optional; defaults to webp
     ) {}
 
     public record MapResponse(

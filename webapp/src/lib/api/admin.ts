@@ -60,6 +60,28 @@ export function requestTiling(
   );
 }
 
+export interface ImportedDims {
+  width: number;
+  height: number;
+  maxZoom: number;
+  tileSize?: number;
+  format?: string;
+}
+
+/**
+ * Mark a map READY from a pre-built {z}/{x}/{y} pyramid already uploaded to tile
+ * storage — no source image, no tiling worker. The dimensions are what the
+ * worker would otherwise have computed.
+ */
+export function markImported(
+  id: number,
+  dims: ImportedDims,
+): Promise<MapResponse> {
+  return apiSend<MapResponse>('POST', `/api/v1/maps/${id}/imported`, dims, {
+    auth: true,
+  });
+}
+
 // --- categories ---------------------------------------------------------------
 
 export function createCategory(
@@ -142,7 +164,7 @@ export interface PresignedUpload {
   url: string;
 }
 
-export async function presignUpload(filename: string): Promise<PresignedUpload> {
+async function presignFetch<T>(payload: unknown): Promise<T> {
   const token = getAuthToken();
   const res = await fetch('/api/admin/presign', {
     method: 'POST',
@@ -150,7 +172,7 @@ export async function presignUpload(filename: string): Promise<PresignedUpload> 
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ filename }),
+    body: JSON.stringify(payload),
   });
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok) {
@@ -160,7 +182,28 @@ export async function presignUpload(filename: string): Promise<PresignedUpload> 
         : `presign failed: ${res.status}`;
     throw new Error(msg);
   }
-  return body as PresignedUpload;
+  return body as T;
+}
+
+export function presignUpload(filename: string): Promise<PresignedUpload> {
+  return presignFetch<PresignedUpload>({ filename });
+}
+
+export interface PresignedKey {
+  key: string;
+  url: string;
+}
+
+/**
+ * Sign PUT URLs for a batch of caller-chosen keys. `target: 'tiles'` signs
+ * against the tile bucket (where the tile service serves from) so a pre-built
+ * pyramid can be imported directly. Keep batches ≤500 (server cap).
+ */
+export function presignKeys(
+  keys: string[],
+  target: 'uploads' | 'tiles',
+): Promise<{ bucket: string; urls: PresignedKey[] }> {
+  return presignFetch<{ bucket: string; urls: PresignedKey[] }>({ keys, target });
 }
 
 /** PUT a file to a presigned URL. XHR (not fetch) for upload progress events. */
