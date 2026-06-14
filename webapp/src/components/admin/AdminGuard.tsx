@@ -13,13 +13,13 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, token, loading } = useAuth();
 
   if (loading || (token && !user)) {
-    return <p className="rm-loading">Checking session…</p>;
+    return <p className="text-fg-dim">Checking session…</p>;
   }
 
   if (!token) {
     return (
-      <div className="rm-panel rm-admin-login">
-        <div className="rm-panel-title">Admin login</div>
+      <div className="panel max-w-[380px]">
+        <div className="panel-title">Admin login</div>
         <LoginForm />
       </div>
     );
@@ -27,11 +27,11 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
 
   if (!user?.admin) {
     return (
-      <div className="rm-panel">
-        <p className="rm-error">
+      <div className="panel">
+        <p className="text-sm text-danger">
           This account ({user?.email}) is not an admin.
         </p>
-        <p className="rm-empty">
+        <p className="text-sm text-fg-dim">
           Grant it on the accounts service (<code>bin/rails
           accounts:grant_admin EMAIL=…</code>), then log out and back in — the
           admin claim is baked into the token at login.

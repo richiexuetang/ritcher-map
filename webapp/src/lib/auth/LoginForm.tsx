@@ -59,15 +59,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="rm-login">
-      <div className="rm-login__header">
-        <h2 className="rm-login__title">
+    <div className="flex flex-col gap-3.5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">
           {mode === 'login' ? 'Log in' : 'Create account'}
         </h2>
         {onClose && (
           <button
             type="button"
-            className="rm-login__close"
+            className="appearance-none border-0 bg-transparent text-fg-dim text-[22px] leading-none cursor-pointer hover:text-fg"
             aria-label="Close"
             onClick={onClose}
           >
@@ -76,11 +76,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onClose }) => {
         )}
       </div>
 
-      <form className="rm-login__form" onSubmit={handleSubmit}>
-        <label className="rm-login__label">
+      <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+        <label className="flex flex-col gap-1 text-[13px] text-fg-dim">
           <span>Email</span>
           <input
             type="email"
+            className="input"
             autoComplete="email"
             required
             value={email}
@@ -89,10 +90,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onClose }) => {
           />
         </label>
 
-        <label className="rm-login__label">
+        <label className="flex flex-col gap-1 text-[13px] text-fg-dim">
           <span>Password</span>
           <input
             type="password"
+            className="input"
             autoComplete={
               mode === 'login' ? 'current-password' : 'new-password'
             }
@@ -104,7 +106,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onClose }) => {
         </label>
 
         {errors.length > 0 && (
-          <ul className="rm-login__errors" role="alert">
+          <ul className="m-0 pl-[18px] text-danger text-[13px]" role="alert">
             {errors.map((msg, i) => (
               <li key={i}>{msg}</li>
             ))}
@@ -113,7 +115,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onClose }) => {
 
         <button
           type="submit"
-          className="rm-login__submit"
+          className="btn btn-primary"
           disabled={submitting}
         >
           {submitting
@@ -126,7 +128,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onClose }) => {
 
       <button
         type="button"
-        className="rm-login__toggle"
+        className="appearance-none border-0 bg-transparent text-fg-dim text-[13px] cursor-pointer self-center hover:text-fg"
         onClick={toggleMode}
         disabled={submitting}
       >

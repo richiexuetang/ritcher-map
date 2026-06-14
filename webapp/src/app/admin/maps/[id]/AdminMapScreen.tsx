@@ -27,6 +27,7 @@ import {
 import { resolveIconUrl } from '@/lib/icons';
 import { MarkdownEditor } from '@/lib/markdown/MarkdownEditor';
 import { CategoryIcon } from '@/lib/panels/CategoryIcon';
+import { IconPicker } from '@/lib/panels/IconPicker';
 import type { CategoryResponse, MapResponse } from '@/lib/types';
 
 const MapView = dynamic(() => import('@/lib/map/MapView'), { ssr: false });
@@ -369,9 +370,9 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
   // --- render -----------------------------------------------------------------
   if (!meta) {
     return error ? (
-      <p className="rm-error">{error}</p>
+      <p className="text-sm text-danger">{error}</p>
     ) : (
-      <p className="rm-loading">Loading…</p>
+      <p className="text-[15px] text-fg-dim">Loading…</p>
     );
   }
 
@@ -379,23 +380,23 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
 
   return (
     <>
-      <nav className="rm-breadcrumbs">
+      <nav className="flex items-center gap-1 text-sm text-fg-dim mb-4">
         <Link href="/admin">Maps</Link>
         <span aria-hidden="true"> / </span>
         <span>{meta.prefix}</span>
       </nav>
 
-      {error && <p className="rm-error rm-error-inline">{error}</p>}
+      {error && <p className="text-sm text-danger text-left my-0.5">{error}</p>}
 
-      <div className="rm-admin-grid">
-        <div className="rm-admin-map-col">
-          <div className="rm-panel rm-admin-map-panel">
+      <div className="grid grid-cols-1 items-start gap-4 min-[981px]:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="min-w-0">
+          <div className="panel p-2">
             {ready ? (
               <>
-                <div className="rm-admin-hint">
+                <div className="text-xs text-fg-dim px-1 pt-0.5 pb-2">
                   Click the map to place a marker · click a marker to edit it
                 </div>
-                <div className="rm-admin-map">
+                <div className="relative h-[62vh] overflow-hidden rounded-md">
                   <MapView
                     meta={meta}
                     categories={null}
@@ -408,7 +409,7 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                 </div>
               </>
             ) : (
-              <div className="rm-admin-map-placeholder">
+              <div className="flex h-[30vh] items-center justify-center p-4 text-center text-fg-dim">
                 Map is {meta.status} — upload an image and start tiling to get
                 a canvas to place markers on.
               </div>
@@ -416,15 +417,15 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
           </div>
 
           {selection && (
-            <div className="rm-panel rm-admin-panel">
-              <div className="rm-panel-title">
+            <div className="panel mb-4">
+              <div className="panel-title">
                 {selection.kind === 'new'
                   ? `New marker at (${Number(mX).toFixed(0)}, ${Number(mY).toFixed(0)})`
                   : `Edit marker #${selection.marker.id}`}
               </div>
-              <form className="rm-admin-form" onSubmit={markerSubmit}>
+              <form className="flex flex-col gap-2" onSubmit={markerSubmit}>
                 <select
-                  className="rm-select"
+                  className="select"
                   value={mCat}
                   onChange={(e) => setMCat(e.target.value)}
                   required
@@ -439,7 +440,7 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                   ))}
                 </select>
                 <input
-                  className="rm-input"
+                  className="input"
                   placeholder="title"
                   value={mTitle}
                   onChange={(e) => setMTitle(e.target.value)}
@@ -456,28 +457,28 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                     )
                     .map((m) => ({ id: m.id, title: m.title }))}
                 />
-                <div className="rm-admin-form-row">
+                <div className="flex flex-wrap items-center gap-2">
                   <input
-                    className="rm-input"
+                    className="input"
                     value={mX}
                     onChange={(e) => setMX(e.target.value)}
                     aria-label="x"
                   />
                   <input
-                    className="rm-input"
+                    className="input"
                     value={mY}
                     onChange={(e) => setMY(e.target.value)}
                     aria-label="y"
                   />
                 </div>
-                <div className="rm-admin-form-row">
-                  <button className="rm-btn rm-btn-primary" type="submit">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button className="btn btn-primary" type="submit">
                     {selection.kind === 'new' ? 'Create marker' : 'Save'}
                   </button>
                   {selection.kind === 'edit' && (
                     <button
                       type="button"
-                      className="rm-btn rm-btn-danger"
+                      className="btn btn-danger"
                       onClick={markerRemove}
                     >
                       Delete
@@ -485,7 +486,7 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                   )}
                   <button
                     type="button"
-                    className="rm-btn"
+                    className="btn"
                     onClick={() => setSelection(null)}
                   >
                     Cancel
@@ -496,26 +497,26 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
           )}
         </div>
 
-        <div className="rm-admin-side-col">
-          <div className="rm-panel rm-admin-panel">
-            <div className="rm-panel-title">Map</div>
-            <div className="rm-admin-form-row">
+        <div className="min-w-0">
+          <div className="panel mb-4">
+            <div className="panel-title">Map</div>
+            <div className="flex flex-wrap items-center gap-2">
               <input
-                className="rm-input"
+                className="input"
                 value={nameDraft}
                 onChange={(e) => setNameDraft(e.target.value)}
               />
-              <button type="button" className="rm-btn" onClick={saveRename}>
+              <button type="button" className="btn" onClick={saveRename}>
                 Rename
               </button>
             </div>
-            <div className="rm-admin-form-row">
-              <label className="rm-admin-dim" htmlFor="rm-min-zoom">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-[13px] text-fg-dim" htmlFor="rm-min-zoom">
                 Min zoom
               </label>
               <input
                 id="rm-min-zoom"
-                className="rm-input"
+                className="input"
                 type="number"
                 min={0}
                 max={meta.maxZoom ?? undefined}
@@ -523,14 +524,14 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                 onChange={(e) => setMinZoomDraft(e.target.value)}
                 style={{ maxWidth: 80 }}
               />
-              <button type="button" className="rm-btn" onClick={saveMinZoom}>
+              <button type="button" className="btn" onClick={saveMinZoom}>
                 Set
               </button>
             </div>
-            <div className="rm-admin-dim">
+            <div className="text-[13px] text-fg-dim">
               {meta.prefix} ·{' '}
               <span
-                className={`rm-status-badge rm-status-${meta.status.toLowerCase()}`}
+                className={`badge badge-${meta.status.toLowerCase()}`}
               >
                 {meta.status}
               </span>
@@ -547,15 +548,15 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
             )}
             <button
               type="button"
-              className="rm-btn rm-btn-danger"
+              className="btn btn-danger"
               onClick={removeMap}
             >
               Delete map
             </button>
           </div>
 
-          <div className="rm-panel rm-admin-panel">
-            <div className="rm-panel-title">Map image / tiling</div>
+          <div className="panel mb-4">
+            <div className="panel-title">Map image / tiling</div>
             <input
               type="file"
               accept="image/*"
@@ -563,22 +564,22 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
               disabled={uploadPct !== null}
             />
             {uploadPct !== null && (
-              <div className="rm-progressbar">
+              <div className="progressbar">
                 <div
-                  className="rm-progressbar-fill"
+                  className="progressbar-fill"
                   style={{ width: `${uploadPct}%` }}
                 />
               </div>
             )}
-            <div className="rm-admin-form-row">
+            <div className="flex flex-wrap items-center gap-2">
               <input
-                className="rm-input"
+                className="input"
                 placeholder="bucket"
                 value={sourceBucket}
                 onChange={(e) => setSourceBucket(e.target.value)}
               />
               <input
-                className="rm-input"
+                className="input"
                 placeholder="object key (set by upload)"
                 value={sourceKey}
                 onChange={(e) => setSourceKey(e.target.value)}
@@ -586,7 +587,7 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
             </div>
             <button
               type="button"
-              className="rm-btn rm-btn-primary"
+              className="btn btn-primary"
               onClick={startTiling}
               disabled={tilingBusy || sourceKey.trim() === ''}
             >
@@ -597,20 +598,20 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                   : 'Start tiling'}
             </button>
             {(meta.status === 'UPLOADED' || meta.status === 'TILING') && (
-              <div className="rm-admin-dim">
+              <div className="text-[13px] text-fg-dim">
                 Tiling in progress — status refreshes automatically.
               </div>
             )}
           </div>
 
-          <div className="rm-panel rm-admin-panel">
-            <div className="rm-panel-title">Categories</div>
+          <div className="panel mb-4">
+            <div className="panel-title">Categories</div>
             {categories.length === 0 ? (
-              <p className="rm-empty">
+              <p className="text-sm text-fg-dim">
                 None yet — markers need a category, so add one first.
               </p>
             ) : (
-              <table className="rm-table">
+              <table className="w-full text-sm [&_td]:border-t [&_td]:border-edge [&_td]:py-1.5 [&_td]:align-middle [&_tr:first-child_td]:border-t-0">
                 <tbody>
                   {categories.map((c) => (
                     <tr key={c.id}>
@@ -621,18 +622,18 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                         {c.parentId !== null && '↳ '}
                         {c.name}
                       </td>
-                      <td className="rm-admin-dim">{c.slug}</td>
-                      <td className="rm-table-actions">
+                      <td className="text-[13px] text-fg-dim">{c.slug}</td>
+                      <td className="text-right whitespace-nowrap">
                         <button
                           type="button"
-                          className="rm-btn"
+                          className="btn btn-sm ml-1.5"
                           onClick={() => catFormLoad(c)}
                         >
                           Edit
                         </button>
                         <button
                           type="button"
-                          className="rm-btn rm-btn-danger"
+                          className="btn btn-danger btn-sm ml-1.5"
                           onClick={() => catRemove(c)}
                         >
                           ✕
@@ -643,13 +644,13 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                 </tbody>
               </table>
             )}
-            <form className="rm-admin-form" onSubmit={catSubmit}>
-              <div className="rm-panel-title">
+            <form className="flex flex-col gap-2" onSubmit={catSubmit}>
+              <div className="panel-title">
                 {catEditing ? `Edit "${catEditing.name}"` : 'New category'}
               </div>
-              <div className="rm-admin-form-row">
+              <div className="flex flex-wrap items-center gap-2">
                 <input
-                  className="rm-input"
+                  className="input"
                   placeholder="slug"
                   value={catSlug}
                   onChange={(e) => setCatSlug(e.target.value)}
@@ -657,26 +658,26 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                   disabled={catEditing !== null}
                 />
                 <input
-                  className="rm-input"
+                  className="input"
                   placeholder="name"
                   value={catName}
                   onChange={(e) => setCatName(e.target.value)}
                   required
                 />
               </div>
-              <div className="rm-admin-form-row">
+              <div className="flex flex-wrap items-center gap-2">
                 <CategoryIcon
                   icon={catIcon.trim() === '' ? null : catIcon.trim()}
                   categoryId={catEditing?.id ?? 0}
                   size={20}
                 />
                 <input
-                  className="rm-input"
+                  className="input"
                   placeholder="icon URL / key (optional)"
                   value={catIcon}
                   onChange={(e) => setCatIcon(e.target.value)}
                 />
-                <label className="rm-btn">
+                <label className="btn">
                   {iconUploading ? 'Uploading…' : 'Upload'}
                   <input
                     type="file"
@@ -687,15 +688,16 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                   />
                 </label>
               </div>
-              <div className="rm-admin-form-row">
+              <IconPicker value={catIcon} onPick={setCatIcon} />
+              <div className="flex flex-wrap items-center gap-2">
                 <input
-                  className="rm-input"
+                  className="input"
                   placeholder="sort"
                   value={catSort}
                   onChange={(e) => setCatSort(e.target.value)}
                 />
                 <select
-                  className="rm-select"
+                  className="select"
                   value={catParent}
                   onChange={(e) => setCatParent(e.target.value)}
                 >
@@ -709,14 +711,14 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                     ))}
                 </select>
               </div>
-              <div className="rm-admin-form-row">
-                <button className="rm-btn rm-btn-primary" type="submit">
+              <div className="flex flex-wrap items-center gap-2">
+                <button className="btn btn-primary" type="submit">
                   {catEditing ? 'Save' : 'Add category'}
                 </button>
                 {catEditing && (
                   <button
                     type="button"
-                    className="rm-btn"
+                    className="btn"
                     onClick={catFormReset}
                   >
                     Cancel
@@ -726,14 +728,14 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
             </form>
           </div>
 
-          <div className="rm-panel rm-admin-panel">
-            <div className="rm-panel-title">Bulk import</div>
-            <p className="rm-empty">
+          <div className="panel mb-4">
+            <div className="panel-title">Bulk import</div>
+            <p className="text-sm text-fg-dim">
               JSON array of {'{categoryId, x, y, title?, description?}'} —
               single batched insert.
             </p>
             <textarea
-              className="rm-input rm-admin-bulk"
+              className="textarea font-mono text-xs"
               rows={5}
               placeholder='[{"categoryId": 1, "x": 100, "y": 200, "title": "…"}]'
               value={bulkText}
@@ -741,13 +743,13 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
             />
             <button
               type="button"
-              className="rm-btn"
+              className="btn"
               onClick={bulkSubmit}
               disabled={bulkText.trim() === ''}
             >
               Import
             </button>
-            {bulkResult && <p className="rm-admin-dim">{bulkResult}</p>}
+            {bulkResult && <p className="text-[13px] text-fg-dim">{bulkResult}</p>}
           </div>
         </div>
       </div>

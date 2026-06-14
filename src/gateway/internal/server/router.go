@@ -33,7 +33,7 @@ type Deps struct {
 //	Proxied:
 //	  /tiles/...                            -> tile-service (Rust)   public
 //	  /maps/{mapId}/markers                 -> tile-service (Rust)   public (viewport read)
-//	  /api/v1/maps,categories,markers ...   -> catalog (Java)        GET public, writes admin
+//	  /api/v1/games,maps,categories,markers -> catalog (Java)        GET public, writes admin
 //	  /auth/..., /account/...               -> accounts (Rails)
 //
 // The local /api/v1/progress/{mapId} pattern is more specific than the proxied
@@ -87,6 +87,7 @@ func New(d Deps) (http.Handler, error) {
 		return nil, err
 	}
 	for _, p := range []string{
+		"/api/v1/games", "/api/v1/games/",
 		"/api/v1/maps", "/api/v1/maps/",
 		"/api/v1/categories", "/api/v1/categories/",
 		"/api/v1/markers", "/api/v1/markers/",

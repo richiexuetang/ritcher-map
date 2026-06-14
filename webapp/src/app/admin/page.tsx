@@ -67,17 +67,17 @@ export default function AdminMapsPage() {
 
   return (
     <>
-      <h1 className="rm-page-title">Maps</h1>
+      <h1 className="text-2xl font-bold">Maps</h1>
 
-      <div className="rm-panel rm-admin-panel">
-        <div className="rm-panel-title">New map</div>
-        <p className="rm-empty">
+      <div className="panel mb-4">
+        <div className="panel-title">New map</div>
+        <p className="text-sm text-fg-dim">
           A “game” is just the set of maps sharing a game slug — use a new
           slug to start a new game.
         </p>
-        <form className="rm-admin-form-row" onSubmit={submit}>
+        <form className="flex gap-2 flex-wrap" onSubmit={submit}>
           <input
-            className="rm-input"
+            className="input flex-1 min-w-[120px]"
             placeholder="game slug (e.g. elden-ring)"
             value={gameSlug}
             onChange={(e) => setGameSlug(e.target.value)}
@@ -90,60 +90,60 @@ export default function AdminMapsPage() {
             ))}
           </datalist>
           <input
-            className="rm-input"
+            className="input flex-1 min-w-[120px]"
             placeholder="map slug (e.g. overworld)"
             value={mapSlug}
             onChange={(e) => setMapSlug(e.target.value)}
             required
           />
           <input
-            className="rm-input"
+            className="input flex-1 min-w-[120px]"
             placeholder="display name (e.g. The Lands Between)"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
           />
-          <button className="rm-btn rm-btn-primary" disabled={busy}>
+          <button className="btn btn-primary" disabled={busy}>
             {busy ? 'Creating…' : 'Create'}
           </button>
         </form>
-        {error && <p className="rm-error rm-error-inline">{error}</p>}
+        {error && <p className="text-sm text-danger text-left my-0.5">{error}</p>}
       </div>
 
       {maps === null ? (
-        <p className="rm-loading">Loading…</p>
+        <p className="text-fg-dim">Loading…</p>
       ) : games.length === 0 ? (
-        <p className="rm-empty">No maps yet — create the first one above.</p>
+        <p className="text-sm text-fg-dim">No maps yet — create the first one above.</p>
       ) : (
         games.map((g) => (
-          <div key={g.slug} className="rm-panel rm-admin-panel">
-            <div className="rm-panel-title">
-              {g.title} <span className="rm-admin-dim">({g.slug})</span>
+          <div key={g.slug} className="panel mb-4">
+            <div className="panel-title">
+              {g.title} <span className="text-[13px] text-fg-dim">({g.slug})</span>
             </div>
-            <table className="rm-table">
+            <table className="w-full border-collapse text-sm [&_td]:px-2 [&_td]:py-1.5 [&_td]:border-t [&_td]:border-edge [&_td]:align-middle [&_tr:first-child_td]:border-t-0">
               <tbody>
                 {g.maps.map((m) => (
                   <tr key={m.id}>
                     <td>
                       <Link href={`/admin/maps/${m.id}`}>{m.name}</Link>
                     </td>
-                    <td className="rm-admin-dim">{m.prefix}</td>
+                    <td className="text-[13px] text-fg-dim">{m.prefix}</td>
                     <td>
                       <span
-                        className={`rm-status-badge rm-status-${m.status.toLowerCase()}`}
+                        className={`badge badge-${m.status.toLowerCase()}`}
                       >
                         {m.status}
                       </span>
                     </td>
-                    <td className="rm-admin-dim">
+                    <td className="text-[13px] text-fg-dim">
                       {m.width !== null && m.height !== null
                         ? `${m.width}×${m.height}`
                         : '—'}
                     </td>
-                    <td className="rm-table-actions">
+                    <td className="text-right whitespace-nowrap">
                       <button
                         type="button"
-                        className="rm-btn rm-btn-danger"
+                        className="btn btn-danger btn-sm"
                         onClick={() => remove(m)}
                       >
                         Delete

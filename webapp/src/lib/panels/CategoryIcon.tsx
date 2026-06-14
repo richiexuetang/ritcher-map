@@ -35,7 +35,7 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({
   if (url && !failed) {
     return (
       <img
-        className="rm-cat-icon"
+        className="cat-icon"
         src={url}
         alt={alt}
         width={size}
@@ -48,7 +48,7 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({
   }
   return (
     <span
-      className="rm-swatch"
+      className="swatch"
       style={{ background: categoryColor(categoryId), width: size, height: size }}
       aria-hidden="true"
     />

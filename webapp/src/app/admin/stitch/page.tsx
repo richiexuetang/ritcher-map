@@ -191,8 +191,8 @@ export default function StitchPage() {
 
   return (
     <>
-      <h1 className="rm-page-title">Import or stitch a tile pyramid</h1>
-      <p className="rm-page-sub">
+      <h1 className="text-2xl font-bold">Import or stitch a tile pyramid</h1>
+      <p className="text-fg-dim">
         Upload a folder of tiles laid out as <code>{'{z}/{x}/{y}'}</code>{' '}
         (standard XYZ pyramid). <strong>Import directly</strong> uploads every
         tile straight to a map&apos;s tile storage and marks it READY — no size
@@ -202,8 +202,8 @@ export default function StitchPage() {
         (<code>{'{z}/{y}/{x}'}</code>, e.g. legacy leaflet) — tick “y before x”.
       </p>
 
-      <div className="rm-panel rm-admin-panel">
-        <div className="rm-panel-title">1 · Tile folder</div>
+      <div className="panel mb-4">
+        <div className="panel-title">1 · Tile folder</div>
         <input
           type="file"
           accept="image/*"
@@ -218,13 +218,13 @@ export default function StitchPage() {
           }}
           onChange={(e) => onPick(e.target.files)}
         />
-        <label className="rm-cat-row">
+        <label className="flex cursor-pointer select-none items-center gap-2 rounded-md px-1.5 py-1 text-sm hover:bg-white/5">
           <input
             type="checkbox"
             checked={order === 'yx'}
             onChange={(e) => setOrder(e.target.checked ? 'yx' : 'xy')}
           />
-          <span className="rm-cat-name">
+          <span className="flex-1 min-w-0 truncate">
             y before x —{' '}
             {parsed.pyramid ? (
               <code>{'{z}/{y}/{x}'}</code>
@@ -233,25 +233,25 @@ export default function StitchPage() {
             )}
           </span>
         </label>
-        <label className="rm-cat-row">
+        <label className="flex cursor-pointer select-none items-center gap-2 rounded-md px-1.5 py-1 text-sm hover:bg-white/5">
           <input
             type="checkbox"
             checked={flipY}
             onChange={(e) => setFlipY(e.target.checked)}
           />
-          <span className="rm-cat-name">
+          <span className="flex-1 min-w-0 truncate">
             Flip Y (tiles numbered bottom-up / TMS)
           </span>
         </label>
 
         {parsed.total > 0 && parsed.zooms.length === 0 && (
-          <div className="rm-admin-dim">
+          <div className="text-[13px] text-fg-dim">
             No tiles recognized — expected a {'{z}/{x}/{y}'} folder or filenames
             ending in two numbers.
           </div>
         )}
         {parsed.zooms.length > 0 && (
-          <div className="rm-admin-dim">
+          <div className="text-[13px] text-fg-dim">
             {parsed.total} files ·{' '}
             {parsed.pyramid
               ? `${parsed.zooms.length} zoom level(s): z${parsed.zooms[0]}–z${parsed.zooms[parsed.zooms.length - 1]}`
@@ -260,13 +260,13 @@ export default function StitchPage() {
               ` · skipped ${parsed.skipped.length} non-tile file(s)`}
           </div>
         )}
-        {error && <p className="rm-error rm-error-inline">{error}</p>}
+        {error && <p className="text-sm text-danger text-left my-0.5">{error}</p>}
       </div>
 
       {importPlan && (
-        <div className="rm-panel rm-admin-panel">
-          <div className="rm-panel-title">2 · Import directly (recommended)</div>
-          <p className="rm-admin-dim">
+        <div className="panel mb-4">
+          <div className="panel-title">2 · Import directly (recommended)</div>
+          <p className="text-[13px] text-fg-dim">
             Upload all {importPlan.total} tiles across {importPlan.levels.length}{' '}
             level(s) (z{importPlan.levels[0].z}–z{importPlan.maxZoom}) to the
             target map&apos;s tile storage, then mark it READY. No image is
@@ -281,9 +281,9 @@ export default function StitchPage() {
               </>
             )}
           </p>
-          <div className="rm-admin-form-row">
+          <div className="flex flex-wrap items-center gap-2">
             <select
-              className="rm-select"
+              className="select"
               value={importTarget}
               onChange={(e) => setImportTarget(e.target.value)}
             >
@@ -298,7 +298,7 @@ export default function StitchPage() {
             </select>
             <button
               type="button"
-              className="rm-btn rm-btn-primary"
+              className="btn btn-primary"
               onClick={() => runImport(importPlan, maps)}
               disabled={importTarget === '' || importing !== null}
             >
@@ -306,15 +306,15 @@ export default function StitchPage() {
             </button>
           </div>
           {importPct !== null && (
-            <div className="rm-progressbar">
+            <div className="progressbar">
               <div
-                className="rm-progressbar-fill"
+                className="progressbar-fill"
                 style={{ width: `${importPct}%` }}
               />
             </div>
           )}
           {imported && (
-            <p className="rm-admin-dim">
+            <p className="text-[13px] text-fg-dim">
               Imported — {imported.width}×{imported.height}, z0–
               {imported.maxZoom}.{' '}
               <Link href={`/admin/maps/${imported.id}`}>{imported.prefix}</Link>{' '}
@@ -324,20 +324,20 @@ export default function StitchPage() {
         </div>
       )}
 
-      <div className="rm-panel rm-admin-panel">
-        <div className="rm-panel-title">
+      <div className="panel mb-4">
+        <div className="panel-title">
           Or · stitch one level into an image
         </div>
-        <p className="rm-admin-dim">
+        <p className="text-[13px] text-fg-dim">
           Reassembles a single zoom level into one PNG to upload and re-tile.
           Fine for small maps; large levels exceed the browser canvas limit
           (~16384px/side) — use “Import directly” instead.
         </p>
         {parsed.zooms.length > 1 && (
-          <label className="rm-admin-form-row">
-            <span className="rm-admin-dim">Zoom level</span>
+          <label className="flex flex-wrap items-center gap-2">
+            <span className="text-[13px] text-fg-dim">Zoom level</span>
             <select
-              className="rm-select"
+              className="select"
               value={selectedZoom ?? ''}
               onChange={(e) => setSelectedZoom(Number(e.target.value))}
             >
@@ -356,7 +356,7 @@ export default function StitchPage() {
           </label>
         )}
         {grid && (
-          <div className="rm-admin-dim">
+          <div className="text-[13px] text-fg-dim">
             {parsed.pyramid && selectedZoom !== null && `z${selectedZoom}: `}
             {grid.cells.length} tiles → {grid.cols}×{grid.rows} grid
             {grid.missing > 0 && ` · ${grid.missing} blank cells`}
@@ -364,7 +364,7 @@ export default function StitchPage() {
         )}
         <button
           type="button"
-          className="rm-btn"
+          className="btn"
           onClick={stitch}
           disabled={!grid || busy !== null}
         >
@@ -373,8 +373,8 @@ export default function StitchPage() {
       </div>
 
       {result && (
-        <div className="rm-panel rm-admin-panel">
-          <div className="rm-panel-title">
+        <div className="panel mb-4">
+          <div className="panel-title">
             Stitched image — {result.width}×{result.height} (
             {(result.blob.size / 1024 / 1024).toFixed(1)} MB)
           </div>
@@ -382,15 +382,15 @@ export default function StitchPage() {
           <img
             src={result.url}
             alt="stitched preview"
-            className="rm-stitch-preview"
+            className="max-h-[50vh] w-full rounded-md object-contain"
           />
-          <div className="rm-admin-form-row">
-            <a className="rm-btn" href={result.url} download="stitched.png">
+          <div className="flex flex-wrap items-center gap-2">
+            <a className="btn" href={result.url} download="stitched.png">
               Download PNG
             </a>
             <button
               type="button"
-              className="rm-btn rm-btn-primary"
+              className="btn btn-primary"
               onClick={upload}
               disabled={uploadPct !== null}
             >
@@ -401,14 +401,14 @@ export default function StitchPage() {
       )}
 
       {uploadedKey && (
-        <div className="rm-panel rm-admin-panel">
-          <div className="rm-panel-title">Tile the stitched image</div>
-          <div className="rm-admin-dim">
+        <div className="panel mb-4">
+          <div className="panel-title">Tile the stitched image</div>
+          <div className="text-[13px] text-fg-dim">
             Uploaded as <code>{uploadedKey.bucket}/{uploadedKey.key}</code>
           </div>
-          <div className="rm-admin-form-row">
+          <div className="flex flex-wrap items-center gap-2">
             <select
-              className="rm-select"
+              className="select"
               value={targetMap}
               onChange={(e) => setTargetMap(e.target.value)}
             >
@@ -423,7 +423,7 @@ export default function StitchPage() {
             </select>
             <button
               type="button"
-              className="rm-btn rm-btn-primary"
+              className="btn btn-primary"
               onClick={kickTiling}
               disabled={targetMap === ''}
             >
@@ -431,7 +431,7 @@ export default function StitchPage() {
             </button>
           </div>
           {tiled && (
-            <p className="rm-admin-dim">
+            <p className="text-[13px] text-fg-dim">
               Tiling requested — follow it on{' '}
               <Link href={`/admin/maps/${tiled.id}`}>{tiled.prefix}</Link>.
             </p>

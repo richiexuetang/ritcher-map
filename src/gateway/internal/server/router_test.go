@@ -65,20 +65,28 @@ func TestCatalogReadsPublicWritesAdmin(t *testing.T) {
 		want         int
 	}{
 		// Anonymous reads reach the backend.
+		{"anon read games", http.MethodGet, "/api/v1/games", "", http.StatusOK},
+		{"anon read game", http.MethodGet, "/api/v1/games/elden-ring", "", http.StatusOK},
 		{"anon read maps", http.MethodGet, "/api/v1/maps", "", http.StatusOK},
 		{"anon read map", http.MethodGet, "/api/v1/maps/1", "", http.StatusOK},
 		{"anon read categories", http.MethodGet, "/api/v1/categories", "", http.StatusOK},
 		{"anon read markers", http.MethodGet, "/api/v1/markers", "", http.StatusOK},
 		// Anonymous writes are rejected at the edge.
+		{"anon create game", http.MethodPost, "/api/v1/games", "", http.StatusUnauthorized},
+		{"anon update game", http.MethodPut, "/api/v1/games/elden-ring", "", http.StatusUnauthorized},
 		{"anon create map", http.MethodPost, "/api/v1/maps", "", http.StatusUnauthorized},
 		{"anon tiling", http.MethodPost, "/api/v1/maps/1/tiling", "", http.StatusUnauthorized},
 		{"anon update marker", http.MethodPut, "/api/v1/markers/5", "", http.StatusUnauthorized},
 		{"anon delete category", http.MethodDelete, "/api/v1/categories/2", "", http.StatusUnauthorized},
 		// A valid session without the admin claim cannot write.
+		{"user create game", http.MethodPost, "/api/v1/games", userToken, http.StatusForbidden},
 		{"user create map", http.MethodPost, "/api/v1/maps", userToken, http.StatusForbidden},
 		{"user tiling", http.MethodPost, "/api/v1/maps/1/tiling", userToken, http.StatusForbidden},
 		{"user delete marker", http.MethodDelete, "/api/v1/markers/5", userToken, http.StatusForbidden},
 		// Admin writes reach the backend.
+		{"admin create game", http.MethodPost, "/api/v1/games", adminToken, http.StatusOK},
+		{"admin update game", http.MethodPut, "/api/v1/games/elden-ring", adminToken, http.StatusOK},
+		{"admin delete game", http.MethodDelete, "/api/v1/games/elden-ring", adminToken, http.StatusOK},
 		{"admin create map", http.MethodPost, "/api/v1/maps", adminToken, http.StatusOK},
 		{"admin tiling", http.MethodPost, "/api/v1/maps/1/tiling", adminToken, http.StatusOK},
 		{"admin delete category", http.MethodDelete, "/api/v1/categories/2", adminToken, http.StatusOK},
