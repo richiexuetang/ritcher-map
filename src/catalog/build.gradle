@@ -35,7 +35,7 @@ repositories {
 // protoc and protobuf-java are pinned to the SAME version so generated code and
 // the runtime always match.
 // ---------------------------------------------------------------------------
-def protobufVersion = '3.25.5'
+def protobufVersion = '4.35.1'
 // Local/CI: default to the repo's shared proto tree (../../proto). Containers
 // supply it at an explicit absolute path via -PprotoDir=/proto (the relative
 // "../../proto" traversal normalizes inconsistently from the image's /app dir).
