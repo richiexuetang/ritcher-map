@@ -1,6 +1,7 @@
 package com.ritchermap.catalog.api;
 
 import com.ritchermap.catalog.domain.Category;
+import com.ritchermap.catalog.domain.Game;
 import com.ritchermap.catalog.domain.GameMap;
 import com.ritchermap.catalog.domain.Marker;
 import com.ritchermap.catalog.domain.MapStatus;
@@ -80,6 +81,52 @@ public final class Dtos {
                     m.getId(), m.getGameSlug(), m.getMapSlug(), m.getName(), m.getPrefix(),
                     m.getStatus(), m.getWidth(), m.getHeight(), m.getMaxZoom(),
                     m.getMinZoom(), m.getTileSize(), m.getFormat(), m.getCreatedAt(), m.getUpdatedAt()
+            );
+        }
+    }
+
+    // ---------- Game ----------
+
+    public record CreateGameRequest(
+            @NotBlank @Pattern(regexp = "[a-z0-9-]+") @Size(max = 60) String slug,
+            @NotBlank @Size(max = 200) String title,
+            @Size(max = 32) String primaryColor,
+            @Size(max = 32) String accentColor,
+            @Size(max = 120) String fontFamily,
+            @Size(max = 500) String fontUrl,
+            @Size(max = 500) String logoUrl,
+            @Size(max = 500) String thumbnailUrl
+    ) {}
+
+    public record UpdateGameRequest(
+            @NotBlank @Size(max = 200) String title,
+            @Size(max = 32) String primaryColor,
+            @Size(max = 32) String accentColor,
+            @Size(max = 120) String fontFamily,
+            @Size(max = 500) String fontUrl,
+            @Size(max = 500) String logoUrl,
+            @Size(max = 500) String thumbnailUrl
+    ) {}
+
+    public record GameResponse(
+            Long id,
+            String slug,
+            String title,
+            String primaryColor,
+            String accentColor,
+            String fontFamily,
+            String fontUrl,
+            String logoUrl,
+            String thumbnailUrl,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        public static GameResponse from(Game g) {
+            return new GameResponse(
+                    g.getId(), g.getSlug(), g.getTitle(),
+                    g.getPrimaryColor(), g.getAccentColor(), g.getFontFamily(),
+                    g.getFontUrl(), g.getLogoUrl(), g.getThumbnailUrl(),
+                    g.getCreatedAt(), g.getUpdatedAt()
             );
         }
     }

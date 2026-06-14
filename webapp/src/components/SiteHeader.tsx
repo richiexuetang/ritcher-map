@@ -11,27 +11,32 @@ export function SiteHeader() {
   const [showLogin, setShowLogin] = useState(false);
 
   return (
-    <header className="rm-header">
-      <Link href="/" className="rm-header-brand">
+    <header className="flex items-center justify-between gap-4 border-b border-edge px-6 py-3.5">
+      <Link
+        href="/"
+        className="text-lg font-bold tracking-[0.2px] text-fg hover:text-accent hover:no-underline"
+      >
         RitcherMap
       </Link>
-      <div className="rm-header-actions">
+      <div className="flex items-center gap-2.5">
         {token ? (
           <>
             {user?.admin && (
-              <Link href="/admin" className="rm-btn">
+              <Link href="/admin" className="btn">
                 Admin
               </Link>
             )}
-            <span className="rm-user-email">{user?.email}</span>
-            <button type="button" className="rm-btn" onClick={logout}>
+            <span className="max-w-[180px] truncate text-[13px] text-fg-dim">
+              {user?.email}
+            </span>
+            <button type="button" className="btn" onClick={logout}>
               Log out
             </button>
           </>
         ) : (
           <button
             type="button"
-            className="rm-btn rm-btn-primary"
+            className="btn btn-primary"
             onClick={() => setShowLogin(true)}
           >
             Log in
@@ -40,8 +45,14 @@ export function SiteHeader() {
       </div>
 
       {showLogin && !token && (
-        <div className="rm-modal-overlay" onClick={() => setShowLogin(false)}>
-          <div className="rm-modal" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/55 backdrop-blur-[2px]"
+          onClick={() => setShowLogin(false)}
+        >
+          <div
+            className="relative w-[360px] max-w-[calc(100vw-32px)] rounded-card border border-edge bg-panel p-6 shadow-panel"
+            onClick={(e) => e.stopPropagation()}
+          >
             <LoginForm onClose={() => setShowLogin(false)} />
           </div>
         </div>

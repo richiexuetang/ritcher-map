@@ -52,6 +52,42 @@ const MARKER_INTERACTIVE_LAYERS = [MARKER_LAYER_ID, MARKER_SYMBOL_LAYER_ID];
 
 /** Longest icon edge (px) markers render at; sprites are scaled to this. */
 const ICON_TARGET_PX = 28;
+/** Rasterize sprites at 2x for crispness on hi-dpi screens. */
+const ICON_PIXEL_RATIO = 2;
+
+/**
+ * Rasterize an icon URL to ImageData for `map.addImage`. Uses an <img> + canvas
+ * (not `map.loadImage`, whose createImageBitmap path can't decode SVG) so both
+ * SVG and raster icons work; the icon is fit, centered, into a square so all
+ * categories render at a uniform size regardless of source aspect/dimensions.
+ */
+function rasterizeIcon(url: string): Promise<ImageData> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous'; // cross-origin icons need GET CORS, else taint
+    img.onload = () => {
+      const size = ICON_TARGET_PX * ICON_PIXEL_RATIO;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject(new Error('no 2d context'));
+      const iw = img.naturalWidth || size;
+      const ih = img.naturalHeight || size;
+      const scale = Math.min(size / iw, size / ih);
+      const w = iw * scale;
+      const h = ih * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      try {
+        resolve(ctx.getImageData(0, 0, size, size));
+      } catch (e) {
+        reject(e instanceof Error ? e : new Error('icon canvas tainted'));
+      }
+    };
+    img.onerror = () => reject(new Error('icon load failed'));
+    img.src = url;
+  });
+}
 
 const EMPTY_FC: GeoJSON.FeatureCollection<GeoJSON.Point, AnyProps> = {
   type: 'FeatureCollection',
@@ -287,15 +323,14 @@ export const MapView: React.FC<MapViewProps> = ({
         const spriteId = categoryIconSpriteId(catId);
         if (map.hasImage(spriteId) || loadingIcons.current.has(spriteId)) continue;
         loadingIcons.current.add(spriteId);
-        map
-          .loadImage(url)
-          .then(({ data }) => {
+        // Rasterize via <img>+canvas rather than map.loadImage: that path uses
+        // createImageBitmap, which can't decode SVG (our built-in icons). This
+        // handles SVG and raster uniformly, normalized to a square sprite.
+        rasterizeIcon(url)
+          .then((data) => {
             loadingIcons.current.delete(spriteId);
             if (cancelled || map.hasImage(spriteId)) return;
-            // Normalize wildly different source sizes to ~ICON_TARGET_PX.
-            const natural = Math.max(data.width, data.height) || ICON_TARGET_PX;
-            const pixelRatio = Math.max(1, natural / ICON_TARGET_PX);
-            map.addImage(spriteId, data, { pixelRatio });
+            map.addImage(spriteId, data, { pixelRatio: ICON_PIXEL_RATIO });
             loadedIconCats.current.add(catId);
             setIconsVersion((v) => v + 1);
           })
@@ -367,15 +402,20 @@ export const MapView: React.FC<MapViewProps> = ({
   }, [mapInstance, focus, meta.maxZoom]);
 
   return (
-    <div className="rm-map-root">
-      <div ref={containerRef} className="rm-map-canvas" />
+    <div className="relative h-full w-full">
+      {/* h-full/w-full (not absolute inset-0): MapLibre's unlayered
+          `.maplibregl-map { position: relative }` overrides Tailwind's layered
+          `.absolute`, so inset-0 wouldn't stretch the container. */}
+      <div ref={containerRef} className="h-full w-full" />
       {!ready && (
-        <div className="rm-map-overlay">
+        <div className="absolute inset-0 z-[5] flex items-center justify-center bg-bg/70 text-fg-dim text-[15px] pointer-events-none">
           Map not ready yet (status: {meta.status})
         </div>
       )}
       {vp.error && ready && (
-        <div className="rm-map-error">Markers failed: {vp.error}</div>
+        <div className="absolute left-1/2 bottom-[18px] -translate-x-1/2 z-[6] bg-[rgba(40,12,12,0.92)] border border-danger/50 text-[#ffb4b4] text-[13px] px-3 py-2 rounded-lg">
+          Markers failed: {vp.error}
+        </div>
       )}
     </div>
   );

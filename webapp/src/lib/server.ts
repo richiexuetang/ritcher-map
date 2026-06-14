@@ -7,7 +7,7 @@
 // `next build` on CI with no backend around.
 
 import { GATEWAY_URL } from './config';
-import type { CategoryResponse, MapResponse } from './types';
+import type { CategoryResponse, GameResponse, MapResponse } from './types';
 
 async function gatewayJson<T>(path: string, revalidate = 60): Promise<T | null> {
   try {
@@ -38,4 +38,13 @@ export async function fetchCategories(
     (await gatewayJson<CategoryResponse[]>(`/api/v1/maps/${mapId}/categories`)) ??
     []
   );
+}
+
+export async function fetchGames(): Promise<GameResponse[]> {
+  return (await gatewayJson<GameResponse[]>('/api/v1/games')) ?? [];
+}
+
+/** Per-game branding row, or null if the game has none yet. */
+export async function fetchGame(slug: string): Promise<GameResponse | null> {
+  return gatewayJson<GameResponse>(`/api/v1/games/${slug}`);
 }

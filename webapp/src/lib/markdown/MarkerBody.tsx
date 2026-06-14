@@ -46,7 +46,7 @@ function buildComponents(
         return (
           <button
             type="button"
-            className="rm-marker-link"
+            className="marker-link"
             data-marker-id={id}
             onClick={() => onMarkerLink?.(id)}
           >
@@ -60,13 +60,13 @@ function buildComponents(
       if (embed && childText(props.children) === href) {
         if (embed.kind === 'file') {
           return (
-            <span className="rm-embed rm-embed-video">
+            <span className="embed embed-video">
               <video src={embed.src} controls preload="metadata" />
             </span>
           );
         }
         return (
-          <span className="rm-embed rm-embed-iframe">
+          <span className="embed embed-iframe">
             <iframe
               src={embed.src}
               title={embed.title}
@@ -96,7 +96,7 @@ function buildComponents(
       // eslint-disable-next-line @next/next/no-img-element
       return (
         <img
-          className="rm-md-img"
+          className="md-img"
           src={s}
           alt={typeof props.alt === 'string' ? props.alt : ''}
           loading="lazy"
@@ -123,7 +123,7 @@ export function MarkerBody({
   );
   if (!markdown || markdown.trim() === '') return null;
   return (
-    <div className="rm-markdown">
+    <div className="md">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeSanitize]}

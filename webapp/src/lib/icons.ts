@@ -22,6 +22,9 @@ export function resolveIconUrl(icon: string | null | undefined): string | null {
   const v = icon.trim();
   if (v === '') return null;
   if (/^(https?:|data:|blob:)/i.test(v)) return v;
+  // Root-relative path (e.g. a built-in /icons/categories/*.svg) is already a
+  // usable URL against the app origin — never an R2 key.
+  if (v.startsWith('/')) return v;
   if (!ASSET_BASE_URL) return null;
   return `${ASSET_BASE_URL}/${v.replace(/^\/+/, '')}`;
 }

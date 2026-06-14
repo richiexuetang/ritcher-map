@@ -65,9 +65,9 @@ export const CategoryPanel: React.FC<CategoryPanelProps> = ({
 
   if (categories.length === 0) {
     return (
-      <div className="rm-panel rm-category-panel">
-        <div className="rm-panel-title">Categories</div>
-        <div className="rm-empty">No categories for this map.</div>
+      <div className="panel">
+        <div className="panel-title">Categories</div>
+        <div className="text-sm text-fg-dim">No categories for this map.</div>
       </div>
     );
   }
@@ -81,9 +81,9 @@ export const CategoryPanel: React.FC<CategoryPanelProps> = ({
     return (
       <label
         key={category.id}
-        className={`rm-cat-row${nested ? ' rm-cat-nested' : ''}${
-          isSelected ? ' rm-cat-selected' : ''
-        }`}
+        className={`flex items-center gap-2 text-sm px-1.5 py-1 rounded-md cursor-pointer select-none hover:bg-white/5${
+          nested ? ' ml-[18px]' : ''
+        }${isSelected ? ' bg-accent/[0.14]' : ''}`}
       >
         <input
           type="checkbox"
@@ -91,21 +91,25 @@ export const CategoryPanel: React.FC<CategoryPanelProps> = ({
           onChange={() => onToggle(category.id)}
         />
         <CategoryIcon icon={category.icon} categoryId={category.id} />
-        <span className="rm-cat-name">{category.name}</span>
+        <span className="flex-1 min-w-0 truncate">{category.name}</span>
       </label>
     );
   };
 
   return (
-    <div className="rm-panel rm-category-panel">
-      <div className="rm-panel-title">Categories</div>
-      <label className={`rm-cat-row rm-cat-all${allActive ? ' rm-cat-selected' : ''}`}>
+    <div className="panel">
+      <div className="panel-title">Categories</div>
+      <label
+        className={`flex items-center gap-2 text-sm px-1.5 py-1 cursor-pointer select-none hover:bg-white/5 border-b border-edge rounded-none pb-2 font-semibold${
+          allActive ? ' bg-accent/[0.14]' : ''
+        }`}
+      >
         <input type="checkbox" checked={allActive} onChange={onToggleAll} />
-        <span className="rm-cat-name">All</span>
+        <span className="flex-1 min-w-0 truncate">All</span>
       </label>
-      <div className="rm-cat-list">
+      <div className="flex flex-col gap-1.5 max-h-[40vh] overflow-y-auto">
         {tree.map((node) => (
-          <div key={node.category.id} className="rm-cat-group">
+          <div key={node.category.id} className="flex flex-col gap-0.5">
             {renderRow(node.category, false)}
             {node.children.map((child) => renderRow(child, true))}
           </div>

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { gameTitle } from '@/lib/games';
-import { fetchCategories, fetchMaps } from '@/lib/server';
+import { fetchCategories, fetchGame, fetchMaps } from '@/lib/server';
 import { MapScreen } from './MapScreen';
 
 interface Props {
@@ -29,7 +29,10 @@ export default async function MapPage({ params }: Props) {
   );
   if (!meta) notFound();
 
-  const categories = await fetchCategories(meta.id);
+  const [categories, game] = await Promise.all([
+    fetchCategories(meta.id),
+    fetchGame(gameSlug),
+  ]);
   const siblings = maps.filter((m) => m.gameSlug === gameSlug);
 
   return (
@@ -37,7 +40,8 @@ export default async function MapPage({ params }: Props) {
       meta={meta}
       categories={categories}
       siblings={siblings}
-      gameTitle={gameTitle(gameSlug)}
+      gameTitle={game?.title ?? gameTitle(gameSlug)}
+      game={game}
     />
   );
 }

@@ -19,7 +19,7 @@ describe('MarkerBody — rich text', () => {
 
   it('renders images with the marker image class', () => {
     const out = html('![alt text](https://cdn.example.com/pic.png)');
-    expect(out).toContain('class="rm-md-img"');
+    expect(out).toContain('class="md-img"');
     expect(out).toContain('src="https://cdn.example.com/pic.png"');
     expect(out).toContain('alt="alt text"');
   });
@@ -32,7 +32,7 @@ describe('MarkerBody — rich text', () => {
 describe('MarkerBody — embeds', () => {
   it('upgrades a bare YouTube link to a no-cookie iframe', () => {
     const out = html('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-    expect(out).toContain('rm-embed-iframe');
+    expect(out).toContain('embed-iframe');
     expect(out).toContain('<iframe');
     expect(out).toContain('src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"');
     expect(out.toLowerCase()).toContain('allowfullscreen');
@@ -40,7 +40,7 @@ describe('MarkerBody — embeds', () => {
 
   it('upgrades a bare video-file link to a <video> player', () => {
     const out = html('https://cdn.example.com/clip.mp4');
-    expect(out).toContain('rm-embed-video');
+    expect(out).toContain('embed-video');
     expect(out).toContain('<video');
     expect(out).toContain('src="https://cdn.example.com/clip.mp4"');
   });
@@ -57,7 +57,7 @@ describe('MarkerBody — embeds', () => {
 describe('MarkerBody — marker references', () => {
   it('renders [label](#marker-N) as a marker-link button, not an anchor', () => {
     const out = html('see [the boss](#marker-42) first');
-    expect(out).toContain('class="rm-marker-link"');
+    expect(out).toContain('class="marker-link"');
     expect(out).toContain('data-marker-id="42"');
     expect(out).toContain('the boss');
     expect(out).not.toContain('<a');
@@ -84,7 +84,7 @@ describe('MarkerBody — marker references', () => {
   it('leaves an ordinary hash link as a normal link', () => {
     const out = html('[top](#section)');
     expect(out).toContain('href="#section"');
-    expect(out).not.toContain('rm-marker-link');
+    expect(out).not.toContain('marker-link');
   });
 });
 

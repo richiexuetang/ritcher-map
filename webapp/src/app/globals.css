@@ -1,1214 +1,275 @@
-/* ---------------------------------------------------------------------------
-   Ritcher Map — global styles for the Next.js app.
-   Ported from web/src/styles.css (same rm-* vocabulary so the transplanted
-   components keep working), extended with page chrome (header, game/map
-   grids, marker detail) and per-game accent theming via [data-game].
---------------------------------------------------------------------------- */
+@import 'tailwindcss';
 
-:root {
-  --rm-bg: #0f1115;
-  --rm-panel-bg: rgba(24, 27, 33, 0.92);
-  --rm-panel-border: rgba(255, 255, 255, 0.08);
-  --rm-text: #e6e8eb;
-  --rm-text-dim: #9aa0a6;
-  --rm-accent: #3b82f6;
-  --rm-accent-hover: #2f6fe0;
-  --rm-danger: #ef4444;
-  --rm-success: #22c55e;
-  --rm-radius: 10px;
-  --rm-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
-  --rm-font:
+/* ---------------------------------------------------------------------------
+   Design tokens (Tailwind v4 @theme → utilities like bg-panel, text-accent,
+   font-brand, rounded-card). Brandable tokens read runtime CSS variables that
+   <BrandTheme> sets per game, so any subtree retints by overriding them.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-bg: #0f1115;
+  --color-panel: rgba(24, 27, 33, 0.92);
+  --color-edge: rgba(255, 255, 255, 0.08);
+  --color-fg: #e6e8eb;
+  --color-fg-dim: #9aa0a6;
+  --color-accent: #3b82f6;
+  --color-accent-hover: #2f6fe0;
+  --color-brand: #3b82f6;
+  --color-danger: #ef4444;
+  --color-success: #22c55e;
+
+  --radius-card: 10px;
+  --shadow-panel: 0 6px 24px rgba(0, 0, 0, 0.45);
+
+  --font-sans:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
     sans-serif;
-}
-
-/* Per-game accents: any wrapper carrying data-game retints its subtree.
-   Slugs come from the catalog's gameSlug; unknown games keep the default. */
-[data-game='botw'] { --rm-accent: #14b8a6; --rm-accent-hover: #0f9c8d; }
-[data-game='zelda-tears-of-the-kingdom'] { --rm-accent: #38bdf8; --rm-accent-hover: #2aa6dd; }
-[data-game='elden-ring'] { --rm-accent: #d4af37; --rm-accent-hover: #b8962c; }
-[data-game='black-myth-wukong'] { --rm-accent: #f59e0b; --rm-accent-hover: #d68a08; }
-[data-game='hogwarts-legacy'] { --rm-accent: #8b5cf6; --rm-accent-hover: #784ad8; }
-[data-game='witcher-3'] { --rm-accent: #ef4444; --rm-accent-hover: #d23a3a; }
-[data-game='god-of-war-ragnarok'] { --rm-accent: #60a5fa; --rm-accent-hover: #4f8fdd; }
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: var(--rm-font);
-  color: var(--rm-text);
-  background: var(--rm-bg);
-  -webkit-font-smoothing: antialiased;
-}
-
-a {
-  color: var(--rm-accent);
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-/* --- Content pages (home / game / account / billing) ---------------------- */
-
-.rm-page {
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-}
-
-.rm-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 24px;
-  border-bottom: 1px solid var(--rm-panel-border);
-}
-
-.rm-header-brand {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  color: var(--rm-text);
-}
-
-.rm-header-brand:hover {
-  text-decoration: none;
-  color: var(--rm-accent);
-}
-
-.rm-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.rm-page-main {
-  width: 100%;
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 32px 24px 64px;
-}
-
-.rm-page-narrow {
-  max-width: 560px;
-}
-
-.rm-page-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 12px;
-  flex: 1;
-}
-
-.rm-page-title {
-  font-size: 28px;
-  font-weight: 700;
-  margin: 0 0 8px;
-}
-
-.rm-page-sub {
-  color: var(--rm-text-dim);
-  margin: 0 0 24px;
-}
-
-.rm-breadcrumbs {
-  font-size: 13px;
-  color: var(--rm-text-dim);
-  margin-bottom: 16px;
-}
-
-/* --- Game grid (home) ----------------------------------------------------- */
-
-.rm-game-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
-  margin-top: 24px;
-}
-
-.rm-game-card {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--rm-panel-border);
-  border-radius: var(--rm-radius);
-  background: var(--rm-panel-bg);
-  overflow: hidden;
-  color: var(--rm-text);
-  transition: border-color 0.12s ease, transform 0.12s ease;
-}
-
-.rm-game-card:hover {
-  text-decoration: none;
-  border-color: var(--rm-accent);
-  transform: translateY(-2px);
-}
-
-.rm-game-card-art {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 120px;
-  font-size: 48px;
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.85);
-  background:
-    radial-gradient(circle at 25% 20%, var(--rm-accent), transparent 65%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.4)),
-    var(--rm-bg);
-}
-
-.rm-game-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
-}
-
-.rm-game-card-title {
-  font-weight: 600;
-}
-
-.rm-game-card-sub {
-  font-size: 13px;
-  color: var(--rm-text-dim);
-}
-
-/* --- Map grid (game landing) ---------------------------------------------- */
-
-.rm-map-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
-  margin-top: 8px;
-}
-
-.rm-map-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 16px;
-  border: 1px solid var(--rm-panel-border);
-  border-radius: var(--rm-radius);
-  background: var(--rm-panel-bg);
-  color: var(--rm-text);
-  transition: border-color 0.12s ease;
-}
-
-a.rm-map-card:hover {
-  text-decoration: none;
-  border-color: var(--rm-accent);
-}
-
-.rm-map-card-disabled {
-  opacity: 0.55;
-}
-
-.rm-map-card-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.rm-map-card-sub {
-  font-size: 13px;
-  color: var(--rm-text-dim);
-}
-
-/* --- Account -------------------------------------------------------------- */
-
-.rm-account-panel {
-  gap: 14px;
-  margin-bottom: 24px;
-}
-
-.rm-account-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 14px;
-}
-
-.rm-account-label {
-  color: var(--rm-text-dim);
-}
-
-/* --- Map page layout: full-bleed map, floating sidebar --------------------- */
-
-.rm-app {
-  position: relative;
-  height: 100dvh;
-  width: 100%;
-  overflow: hidden;
-}
-
-.rm-map-area {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.rm-map-area .maplibregl-map {
-  height: 100%;
-  width: 100%;
-}
-
-.rm-map-root {
-  position: relative;
-  height: 100%;
-  width: 100%;
-}
-
-.rm-map-canvas {
-  position: absolute;
-  inset: 0;
-}
-
-.rm-map-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 17, 21, 0.7);
-  color: var(--rm-text-dim);
-  font-size: 15px;
-  pointer-events: none;
-}
-
-.rm-map-error {
-  position: absolute;
-  left: 50%;
-  bottom: 18px;
-  transform: translateX(-50%);
-  z-index: 6;
-  background: rgba(40, 12, 12, 0.92);
-  border: 1px solid rgba(239, 68, 68, 0.5);
-  color: #ffb4b4;
-  font-size: 13px;
-  padding: 8px 12px;
-  border-radius: 8px;
-}
-
-.rm-loading,
-.rm-hint {
-  font-size: 15px;
-  color: var(--rm-text-dim);
-}
-
-.rm-error {
-  color: var(--rm-danger);
-  font-size: 14px;
-}
-
-.rm-error-inline {
-  text-align: left;
-  margin: 2px 0;
-}
-
-/* --- Sidebar --------------------------------------------------------------- */
-
-.rm-sidebar {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  bottom: 16px;
-  z-index: 10;
-  width: 280px;
-  max-width: calc(100vw - 32px);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-.rm-brand {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  padding: 4px 2px;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-}
-
-.rm-brand a {
-  color: var(--rm-text);
-}
-
-/* --- Panel cards ----------------------------------------------------------- */
-
-.rm-panel {
-  background: var(--rm-panel-bg);
-  border: 1px solid var(--rm-panel-border);
-  border-radius: var(--rm-radius);
-  box-shadow: var(--rm-shadow);
-  backdrop-filter: blur(8px);
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rm-panel-title {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--rm-text-dim);
-}
-
-.rm-empty {
-  font-size: 13px;
-  color: var(--rm-text-dim);
-}
-
-/* --- Map switcher ----------------------------------------------------------- */
-
-.rm-map-switcher {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.rm-map-link {
-  font-size: 13px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--rm-panel-border);
-  color: var(--rm-text);
-}
-
-.rm-map-link:hover {
-  text-decoration: none;
-  border-color: var(--rm-accent);
-}
-
-.rm-map-link-active {
-  background: var(--rm-accent);
-  border-color: var(--rm-accent);
-  color: #fff;
-  font-weight: 600;
-}
-
-/* --- Search ----------------------------------------------------------------- */
-
-.rm-search-results {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: 30vh;
-  overflow-y: auto;
-}
-
-.rm-search-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  padding: 5px 6px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--rm-text);
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.rm-search-row:hover {
-  background: rgba(255, 255, 255, 0.07);
-}
-
-/* --- Form controls ----------------------------------------------------------- */
-
-.rm-select,
-.rm-input {
-  width: 100%;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--rm-panel-border);
-  border-radius: 6px;
-  color: var(--rm-text);
-  font-size: 14px;
-  padding: 8px 10px;
-  font-family: inherit;
-}
-
-.rm-select:focus,
-.rm-input:focus {
-  outline: none;
-  border-color: var(--rm-accent);
-}
-
-.rm-btn {
-  appearance: none;
-  border: 1px solid var(--rm-panel-border);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--rm-text);
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 14px;
-  font-family: inherit;
-  cursor: pointer;
-  transition:
-    background 0.12s ease,
-    border-color 0.12s ease;
-}
-
-.rm-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  text-decoration: none;
-}
-
-.rm-btn-primary {
-  background: var(--rm-accent);
-  border-color: var(--rm-accent);
-  color: #fff;
-  font-weight: 600;
-}
-
-.rm-btn-primary:hover {
-  background: var(--rm-accent-hover);
-  border-color: var(--rm-accent-hover);
-}
-
-.rm-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-/* --- Status badges ----------------------------------------------------------- */
-
-.rm-status-badge {
-  align-self: flex-start;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--rm-text-dim);
-}
-
-.rm-status-ready {
-  background: rgba(34, 197, 94, 0.18);
-  color: #5ee08a;
-}
-
-.rm-status-failed {
-  background: rgba(239, 68, 68, 0.18);
-  color: #ff8080;
-}
-
-.rm-status-tiling,
-.rm-status-uploaded {
-  background: rgba(59, 130, 246, 0.18);
-  color: #7eb0ff;
-}
-
-/* --- Category panel ----------------------------------------------------------- */
-
-.rm-cat-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 40vh;
-  overflow-y: auto;
-}
-
-.rm-cat-group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.rm-cat-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  padding: 4px 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.rm-cat-row:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.rm-cat-selected {
-  background: rgba(59, 130, 246, 0.14);
-}
-
-.rm-cat-nested {
-  margin-left: 18px;
-}
-
-.rm-cat-all {
-  border-bottom: 1px solid var(--rm-panel-border);
-  border-radius: 0;
-  padding-bottom: 8px;
-  font-weight: 600;
-}
-
-.rm-cat-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rm-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex: 0 0 auto;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) inset;
-}
-
-.rm-cat-icon {
-  flex: 0 0 auto;
-  object-fit: contain;
-  border-radius: 2px;
-  image-rendering: -webkit-optimize-contrast;
-}
-
-.rm-cat-row input[type='checkbox'] {
-  accent-color: var(--rm-accent);
-  cursor: pointer;
-}
-
-/* --- Progress / auth panels ----------------------------------------------------- */
-
-.rm-progress-line {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.rm-auth-panel {
-  margin-top: auto;
-}
-
-.rm-user-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: space-between;
-}
-
-.rm-user-email {
-  font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--rm-text);
-}
-
-/* --- Marker detail card ----------------------------------------------------------- */
-
-.rm-detail {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 20;
-  width: 320px;
-  max-width: calc(100vw - 32px);
-  max-height: calc(100dvh - 32px);
-  overflow-y: auto;
-  background: var(--rm-panel-bg);
-  border: 1px solid var(--rm-panel-border);
-  border-radius: var(--rm-radius);
-  box-shadow: var(--rm-shadow);
-  backdrop-filter: blur(8px);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rm-detail-category {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--rm-text-dim);
-}
-
-.rm-detail-title {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0;
-  padding-right: 24px;
-}
-
-.rm-detail-desc {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--rm-text);
-  margin: 0;
-}
-
-/* --- Rendered Markdown (marker descriptions) ------------------------------------ */
-
-.rm-markdown {
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--rm-text);
-  overflow-wrap: anywhere;
-}
-
-.rm-markdown > :first-child {
-  margin-top: 0;
-}
-
-.rm-markdown > :last-child {
-  margin-bottom: 0;
-}
-
-.rm-markdown p,
-.rm-markdown ul,
-.rm-markdown ol,
-.rm-markdown blockquote,
-.rm-markdown pre,
-.rm-markdown table {
-  margin: 0 0 10px;
-}
-
-.rm-markdown h1,
-.rm-markdown h2,
-.rm-markdown h3,
-.rm-markdown h4 {
-  margin: 14px 0 6px;
-  line-height: 1.25;
-}
-
-.rm-markdown h1 { font-size: 18px; }
-.rm-markdown h2 { font-size: 16px; }
-.rm-markdown h3 { font-size: 15px; }
-
-.rm-markdown a {
-  color: var(--rm-accent);
-  text-decoration: underline;
-}
-
-.rm-markdown ul,
-.rm-markdown ol {
-  padding-left: 20px;
-}
-
-.rm-markdown code {
-  font-family: var(--rm-mono, ui-monospace, monospace);
-  font-size: 0.9em;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 1px 4px;
-  border-radius: 4px;
-}
-
-.rm-markdown pre {
-  background: rgba(255, 255, 255, 0.06);
-  padding: 10px 12px;
-  border-radius: 8px;
-  overflow-x: auto;
-}
-
-.rm-markdown pre code {
-  background: none;
-  padding: 0;
-}
-
-.rm-markdown blockquote {
-  border-left: 3px solid var(--rm-panel-border);
-  padding-left: 10px;
-  color: var(--rm-text-dim, #9aa0a6);
-}
-
-.rm-md-img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  border-radius: 8px;
-  margin: 4px 0 10px;
-}
-
-/* Responsive 16:9 wrapper for embedded players (iframe) and uploaded video. */
-.rm-embed {
-  display: block;
-  margin: 4px 0 10px;
-}
-
-.rm-embed-iframe {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-}
-
-.rm-embed-iframe iframe {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  border-radius: 8px;
-}
-
-.rm-embed-video video {
-  display: block;
-  width: 100%;
-  max-height: 60vh;
-  border-radius: 8px;
-  background: #000;
-}
-
-/* --- Markdown editor (admin) --------------------------------------------------- */
-
-.rm-md-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.rm-md-toolbar {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.rm-btn-sm {
-  padding: 3px 9px;
-  font-size: 12px;
-}
-
-.rm-btn-active {
-  background: var(--rm-accent);
-  color: #0b0d10;
-}
-
-.rm-md-textarea {
-  resize: vertical;
-  min-height: 96px;
-  font-family: var(--rm-mono, ui-monospace, monospace);
-  font-size: 13px;
-}
-
-.rm-md-preview {
-  border: 1px solid var(--rm-panel-border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  min-height: 96px;
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.rm-md-marker-select {
-  font-size: 12px;
-  padding: 3px 8px;
-  max-width: 180px;
-}
-
-/* In-description reference to another marker — inline action, not a navigation. */
-.rm-marker-link {
-  display: inline;
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  font: inherit;
-  color: var(--rm-accent);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.rm-marker-link::before {
-  content: '\1F4CD'; /* 📍 round pushpin — signals an in-map jump */
-  margin-right: 3px;
-  font-size: 0.9em;
-  text-decoration: none;
-}
-
-.rm-marker-link:hover {
-  color: var(--rm-text);
-}
-
-.rm-detail-found {
-  border-top: 1px solid var(--rm-panel-border);
-  border-radius: 0;
-  padding-top: 10px;
-  font-weight: 600;
-}
-
-/* --- Login form / modal ----------------------------------------------------------- */
-
-.rm-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(2px);
-}
-
-.rm-modal {
-  position: relative;
-  width: 360px;
-  max-width: calc(100vw - 32px);
-  background: var(--rm-panel-bg);
-  border: 1px solid var(--rm-panel-border);
-  border-radius: var(--rm-radius);
-  box-shadow: var(--rm-shadow);
-  padding: 24px;
-}
-
-.rm-modal-close {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--rm-text-dim);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.rm-modal-close:hover {
-  color: var(--rm-text);
-}
-
-.rm-login {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.rm-login__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.rm-login__title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.rm-login__close {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--rm-text-dim);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.rm-login__close:hover {
-  color: var(--rm-text);
-}
-
-.rm-login__form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.rm-login__label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
-  color: var(--rm-text-dim);
-}
-
-.rm-login__label input {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--rm-panel-border);
-  border-radius: 6px;
-  color: var(--rm-text);
-  font-size: 14px;
-  padding: 8px 10px;
-  font-family: inherit;
-}
-
-.rm-login__label input:focus {
-  outline: none;
-  border-color: var(--rm-accent);
-}
-
-.rm-login__errors {
-  margin: 0;
-  padding-left: 18px;
-  color: var(--rm-danger);
-  font-size: 13px;
-}
-
-.rm-login__submit {
-  appearance: none;
-  border: 1px solid var(--rm-accent);
-  background: var(--rm-accent);
-  color: #fff;
-  font-weight: 600;
-  border-radius: 6px;
-  padding: 9px 12px;
-  font-size: 14px;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.rm-login__submit:hover {
-  background: var(--rm-accent-hover);
-}
-
-.rm-login__submit:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.rm-login__toggle {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--rm-text-dim);
-  font-size: 13px;
-  font-family: inherit;
-  cursor: pointer;
-  align-self: center;
-}
-
-.rm-login__toggle:hover {
-  color: var(--rm-text);
-}
-
-/* --- Marker popup (MapLibre hover) ----------------------------------------------- */
-
-.maplibregl-popup-content {
-  background: var(--rm-panel-bg);
-  color: var(--rm-text);
-  border: 1px solid var(--rm-panel-border);
-  border-radius: 8px;
-  box-shadow: var(--rm-shadow);
-  font-family: var(--rm-font);
-  font-size: 13px;
-  padding: 8px 12px;
-}
-
-.maplibregl-popup-tip {
-  border-top-color: var(--rm-panel-bg) !important;
-  border-bottom-color: var(--rm-panel-bg) !important;
-}
-
-.maplibregl-popup-close-button {
-  color: var(--rm-text-dim);
-  font-size: 16px;
-}
-
-/* --- Admin console ----------------------------------------------------------- */
-
-.rm-header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.rm-admin-tag {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: rgba(239, 68, 68, 0.18);
-  color: #ff9c9c;
-}
-
-.rm-admin-nav {
-  display: flex;
-  gap: 16px;
-  font-size: 14px;
-}
-
-.rm-admin-main {
-  max-width: 1280px;
-}
-
-.rm-admin-panel {
-  margin-bottom: 16px;
-}
-
-.rm-admin-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  gap: 16px;
-  align-items: start;
-}
-
-@media (max-width: 980px) {
-  .rm-admin-grid {
-    grid-template-columns: 1fr;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-brand: var(--font-sans);
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  a {
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
   }
 }
 
-.rm-admin-map-panel {
-  padding: 8px;
+/* ---------------------------------------------------------------------------
+   Reusable component classes (Tailwind @apply). Layout/spacing lives as
+   utilities in the components; these capture the repeated control + content
+   patterns so markup stays clean.
+--------------------------------------------------------------------------- */
+@layer components {
+  .panel {
+    @apply flex flex-col gap-2 rounded-card border border-edge bg-panel p-3 shadow-panel backdrop-blur-md;
+  }
+  .panel-title {
+    @apply text-[11px] font-bold uppercase tracking-wider text-fg-dim;
+  }
+
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md
+      border border-edge bg-white/[0.06] px-3 py-2 text-sm text-fg transition-colors
+      hover:bg-white/[0.12] hover:no-underline disabled:cursor-default disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply border-accent bg-accent font-semibold text-white hover:border-accent-hover hover:bg-accent-hover;
+  }
+  .btn-danger {
+    @apply border-danger/60 text-[#ff8a8a] hover:bg-danger/15;
+  }
+  .btn-sm {
+    @apply px-2.5 py-1 text-xs;
+  }
+  .btn-active {
+    @apply border-accent bg-accent/20;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    @apply w-full rounded-md border border-edge bg-black/30 px-2.5 py-2 text-sm text-fg
+      outline-none focus:border-accent;
+  }
+
+  .badge {
+    @apply inline-block self-start rounded-full bg-white/10 px-2 py-0.5 text-[11px]
+      font-semibold uppercase tracking-wide text-fg-dim;
+  }
+  .badge-ready {
+    @apply bg-success/20 text-[#5ee08a];
+  }
+  .badge-failed {
+    @apply bg-danger/20 text-[#ff8080];
+  }
+  .badge-tiling,
+  .badge-uploaded {
+    @apply bg-accent/20 text-[#7eb0ff];
+  }
+  .badge-draft {
+    @apply bg-white/10 text-fg-dim;
+  }
+
+  .swatch {
+    @apply h-3 w-3 flex-none rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.25)_inset];
+  }
+  .cat-icon {
+    @apply flex-none rounded-[2px] object-contain;
+  }
+
+  .progressbar {
+    @apply h-1.5 w-full overflow-hidden rounded-full bg-white/10;
+  }
+  .progressbar-fill {
+    @apply h-full bg-accent transition-[width] duration-200;
+  }
+
+  /* Built-in category-icon picker (admin) */
+  .icon-picker {
+    @apply flex flex-wrap gap-1.5;
+  }
+  .icon-swatch {
+    @apply inline-flex h-[34px] w-[34px] items-center justify-center rounded-lg
+      border border-edge bg-white/[0.04] p-0 hover:bg-white/10;
+  }
+  .icon-swatch-active {
+    @apply border-accent shadow-[0_0_0_1px_var(--color-accent)_inset];
+  }
+
+  /* In-description reference to another marker */
+  .marker-link {
+    @apply m-0 inline cursor-pointer border-0 bg-transparent p-0 font-[inherit]
+      text-accent underline [text-underline-offset:2px] hover:text-fg;
+  }
+  .marker-link::before {
+    content: '\1F4CD';
+    margin-right: 3px;
+    font-size: 0.9em;
+    text-decoration: none;
+  }
 }
 
-.rm-admin-map {
-  position: relative;
-  height: 62vh;
-  border-radius: 6px;
-  overflow: hidden;
+/* ---------------------------------------------------------------------------
+   Rendered Markdown (marker descriptions) + embeds. Kept as scoped CSS rather
+   than per-element utilities because the HTML is generated by react-markdown.
+--------------------------------------------------------------------------- */
+@layer components {
+  .md {
+    @apply text-sm leading-relaxed text-fg [overflow-wrap:anywhere];
+  }
+  .md > :first-child {
+    margin-top: 0;
+  }
+  .md > :last-child {
+    margin-bottom: 0;
+  }
+  .md p,
+  .md ul,
+  .md ol,
+  .md blockquote,
+  .md pre,
+  .md table {
+    margin: 0 0 10px;
+  }
+  .md h1,
+  .md h2,
+  .md h3,
+  .md h4 {
+    margin: 14px 0 6px;
+    line-height: 1.25;
+  }
+  .md h1 {
+    font-size: 18px;
+  }
+  .md h2 {
+    font-size: 16px;
+  }
+  .md h3 {
+    font-size: 15px;
+  }
+  .md a {
+    @apply text-accent underline;
+  }
+  .md ul,
+  .md ol {
+    padding-left: 20px;
+  }
+  .md code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 4px;
+    border-radius: 4px;
+  }
+  .md pre {
+    background: rgba(255, 255, 255, 0.06);
+    padding: 10px 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  .md pre code {
+    background: none;
+    padding: 0;
+  }
+  .md blockquote {
+    border-left: 3px solid var(--color-edge);
+    padding-left: 10px;
+    color: var(--color-fg-dim);
+  }
+  .md-img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 4px 0 10px;
+  }
+  .embed {
+    display: block;
+    margin: 4px 0 10px;
+  }
+  .embed-iframe {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+  }
+  .embed-iframe iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 8px;
+  }
+  .embed-video video {
+    display: block;
+    width: 100%;
+    max-height: 60vh;
+    border-radius: 8px;
+    background: #000;
+  }
 }
 
-.rm-admin-map-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 30vh;
-  color: var(--rm-text-dim);
-  text-align: center;
-  padding: 16px;
-}
-
-.rm-admin-hint {
-  font-size: 12px;
-  color: var(--rm-text-dim);
-  padding: 2px 4px 8px;
-}
-
-.rm-admin-dim {
+/* ---------------------------------------------------------------------------
+   MapLibre overrides (third-party DOM we don't control the markup of).
+--------------------------------------------------------------------------- */
+.maplibregl-popup-content {
+  background: var(--color-panel);
+  color: var(--color-fg);
+  border: 1px solid var(--color-edge);
+  border-radius: 8px;
   font-size: 13px;
-  color: var(--rm-text-dim);
+  box-shadow: var(--shadow-panel);
 }
-
-.rm-admin-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.maplibregl-popup-tip {
+  border-top-color: var(--color-panel) !important;
+  border-bottom-color: var(--color-panel) !important;
 }
-
-.rm-admin-form-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+.maplibregl-ctrl-group {
+  background: var(--color-panel) !important;
+  border: 1px solid var(--color-edge) !important;
 }
-
-.rm-admin-form-row .rm-input,
-.rm-admin-form-row .rm-select {
-  flex: 1;
-  min-width: 120px;
-}
-
-textarea.rm-input {
-  resize: vertical;
-  font-family: inherit;
-}
-
-.rm-admin-bulk {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
-}
-
-.rm-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.rm-table td {
-  padding: 6px 8px;
-  border-top: 1px solid var(--rm-panel-border);
-  vertical-align: middle;
-}
-
-.rm-table tr:first-child td {
-  border-top: none;
-}
-
-.rm-table-actions {
-  text-align: right;
-  white-space: nowrap;
-}
-
-.rm-table-actions .rm-btn {
-  padding: 3px 9px;
-  font-size: 12px;
-  margin-left: 6px;
-}
-
-.rm-btn-danger {
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #ff9c9c;
-}
-
-.rm-btn-danger:hover {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: var(--rm-danger);
-}
-
-.rm-progressbar {
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-}
-
-.rm-progressbar-fill {
-  height: 100%;
-  background: var(--rm-accent);
-  transition: width 0.15s ease;
-}
-
-.rm-stitch-preview {
-  max-width: 100%;
-  max-height: 420px;
-  object-fit: contain;
-  border: 1px solid var(--rm-panel-border);
-  border-radius: 6px;
-  align-self: flex-start;
-}
-
-.rm-admin-login {
-  max-width: 380px;
-}
-
-/* --- Scrollbars (subtle, dark) ----------------------------------------------------- */
-
-.rm-sidebar::-webkit-scrollbar,
-.rm-cat-list::-webkit-scrollbar,
-.rm-search-results::-webkit-scrollbar,
-.rm-detail::-webkit-scrollbar {
-  width: 8px;
-}
-
-.rm-sidebar::-webkit-scrollbar-thumb,
-.rm-cat-list::-webkit-scrollbar-thumb,
-.rm-search-results::-webkit-scrollbar-thumb,
-.rm-detail::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--color-edge) !important;
 }

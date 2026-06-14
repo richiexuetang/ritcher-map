@@ -84,9 +84,9 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   };
 
   return (
-    <div className="rm-md-editor">
-      <div className="rm-md-toolbar">
-        <label className="rm-btn rm-btn-sm">
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5">
+        <label className="btn btn-sm">
           {uploading === 'image' ? 'Uploading…' : 'Image'}
           <input
             type="file"
@@ -96,7 +96,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             onChange={(e) => onUpload(e.target.files?.[0], 'image')}
           />
         </label>
-        <label className="rm-btn rm-btn-sm">
+        <label className="btn btn-sm">
           {uploading === 'video' ? 'Uploading…' : 'Video'}
           <input
             type="file"
@@ -108,7 +108,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         </label>
         {markers && markers.length > 0 && (
           <select
-            className="rm-select rm-md-marker-select"
+            className="select text-xs max-w-[180px]"
             value=""
             onChange={(e) => linkMarker(e.target.value)}
             title="Insert a link to another marker"
@@ -123,7 +123,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         )}
         <button
           type="button"
-          className={`rm-btn rm-btn-sm${preview ? ' rm-btn-active' : ''}`}
+          className={`btn btn-sm${preview ? ' btn-active' : ''}`}
           onClick={() => setPreview((p) => !p)}
         >
           {preview ? 'Edit' : 'Preview'}
@@ -131,9 +131,9 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       </div>
 
       {preview ? (
-        <div className="rm-md-preview">
+        <div className="rounded-md border border-edge bg-white/[0.03] p-3 min-h-24">
           {value.trim() === '' ? (
-            <span className="rm-empty">Nothing to preview.</span>
+            <span className="text-sm text-fg-dim">Nothing to preview.</span>
           ) : (
             <MarkerBody markdown={value} resolveMarkerLabel={markerTitle} />
           )}
@@ -141,7 +141,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       ) : (
         <textarea
           ref={taRef}
-          className="rm-input rm-md-textarea"
+          className="textarea resize-y min-h-24 font-mono text-[13px]"
           rows={rows}
           placeholder={placeholder}
           value={value}

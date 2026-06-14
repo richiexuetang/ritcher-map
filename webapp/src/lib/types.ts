@@ -70,6 +70,21 @@ export interface MapResponse {
   updatedAt: string;
 }
 
+/** Per-game branding (catalog /api/v1/games). All branding fields nullable. */
+export interface GameResponse {
+  id: number;
+  slug: string;
+  title: string;
+  primaryColor: string | null;
+  accentColor: string | null;
+  fontFamily: string | null;
+  fontUrl: string | null;
+  logoUrl: string | null;
+  thumbnailUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CategoryResponse {
   id: number;
   mapId: number;

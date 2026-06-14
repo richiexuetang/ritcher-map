@@ -4,7 +4,7 @@
 
 import { apiSend, getAuthToken } from './client';
 import type { CatalogMarker } from './maps';
-import type { CategoryResponse, MapResponse } from '../types';
+import type { CategoryResponse, GameResponse, MapResponse } from '../types';
 
 export interface CategoryInput {
   slug: string;
@@ -85,6 +85,30 @@ export function markImported(
   return apiSend<MapResponse>('POST', `/api/v1/maps/${id}/imported`, dims, {
     auth: true,
   });
+}
+
+// --- games (branding) --------------------------------------------------------
+
+export interface GameInput {
+  title: string;
+  primaryColor?: string | null;
+  accentColor?: string | null;
+  fontFamily?: string | null;
+  fontUrl?: string | null;
+  logoUrl?: string | null;
+  thumbnailUrl?: string | null;
+}
+
+export function createGame(slug: string, input: GameInput): Promise<GameResponse> {
+  return apiSend<GameResponse>('POST', '/api/v1/games', { slug, ...input }, { auth: true });
+}
+
+export function updateGame(slug: string, input: GameInput): Promise<GameResponse> {
+  return apiSend<GameResponse>('PUT', `/api/v1/games/${slug}`, input, { auth: true });
+}
+
+export function deleteGame(slug: string): Promise<void> {
+  return apiSend<void>('DELETE', `/api/v1/games/${slug}`, undefined, { auth: true });
 }
 
 // --- categories ---------------------------------------------------------------

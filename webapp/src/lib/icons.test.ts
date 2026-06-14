@@ -32,10 +32,16 @@ describe('resolveIconUrl (no ASSET_BASE_URL configured)', () => {
   it('returns null for a bare object key when no asset base is set', () => {
     expect(resolveIconUrl('uploads/abc/icon.png')).toBeNull();
   });
+
+  it('passes through root-relative paths (built-in /public icons)', () => {
+    expect(resolveIconUrl('/icons/categories/chest.svg')).toBe(
+      '/icons/categories/chest.svg',
+    );
+  });
 });
 
 describe('resolveIconUrl (with ASSET_BASE_URL)', () => {
-  it('joins a bare key onto the configured base (slashes normalized)', async () => {
+  it('joins a bare key onto the configured base', async () => {
     vi.resetModules();
     process.env.NEXT_PUBLIC_ASSET_BASE_URL = 'https://assets.example.com/';
     try {
@@ -43,8 +49,10 @@ describe('resolveIconUrl (with ASSET_BASE_URL)', () => {
       expect(resolve('uploads/abc/icon.png')).toBe(
         'https://assets.example.com/uploads/abc/icon.png',
       );
-      expect(resolve('/leading/slash.png')).toBe(
-        'https://assets.example.com/leading/slash.png',
+      // A root-relative path is already a URL (built-in icon) — passes through,
+      // never joined onto the base.
+      expect(resolve('/icons/categories/chest.svg')).toBe(
+        '/icons/categories/chest.svg',
       );
       // Absolute URLs still win over the base.
       expect(resolve('https://other/x.png')).toBe('https://other/x.png');

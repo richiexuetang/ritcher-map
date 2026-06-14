@@ -1,4 +1,4 @@
-import type { MapResponse } from './types';
+import type { GameResponse, MapResponse } from './types';
 
 /**
  * The backend has no games table — a "game" is the set of catalog maps that
@@ -29,10 +29,20 @@ export interface GameSummary {
   slug: string;
   title: string;
   maps: MapResponse[];
+  /** Branding row from the catalog `games` table, if one exists. */
+  branding: GameResponse | null;
 }
 
-/** Group the flat catalog map list into games, both levels alpha-sorted. */
-export function groupByGame(maps: MapResponse[]): GameSummary[] {
+/**
+ * Group the flat catalog map list into games, both levels alpha-sorted. When
+ * `games` branding rows are supplied, their title/branding take precedence over
+ * the static fallback title.
+ */
+export function groupByGame(
+  maps: MapResponse[],
+  games: GameResponse[] = [],
+): GameSummary[] {
+  const brandBySlug = new Map(games.map((g) => [g.slug, g]));
   const byGame = new Map<string, MapResponse[]>();
   for (const m of maps) {
     const list = byGame.get(m.gameSlug) ?? [];
@@ -40,10 +50,14 @@ export function groupByGame(maps: MapResponse[]): GameSummary[] {
     byGame.set(m.gameSlug, list);
   }
   return [...byGame.entries()]
-    .map(([slug, gameMaps]) => ({
-      slug,
-      title: gameTitle(slug),
-      maps: gameMaps.sort((a, b) => a.name.localeCompare(b.name)),
-    }))
+    .map(([slug, gameMaps]) => {
+      const branding = brandBySlug.get(slug) ?? null;
+      return {
+        slug,
+        title: branding?.title ?? gameTitle(slug),
+        maps: gameMaps.sort((a, b) => a.name.localeCompare(b.name)),
+        branding,
+      };
+    })
     .sort((a, b) => a.title.localeCompare(b.title));
 }
