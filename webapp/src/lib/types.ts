@@ -62,6 +62,8 @@ export interface MapResponse {
   width: number | null;
   height: number | null;
   maxZoom: number | null;
+  /** Lowest zoom the viewer exposes; defaults to 0. */
+  minZoom: number;
   tileSize: number;
   format: string;
   createdAt: string;

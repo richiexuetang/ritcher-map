@@ -25,3 +25,10 @@ export function resolveIconUrl(icon: string | null | undefined): string | null {
   if (!ASSET_BASE_URL) return null;
   return `${ASSET_BASE_URL}/${v.replace(/^\/+/, '')}`;
 }
+
+/**
+ * Generic asset-URL resolver (icons, marker media): an absolute URL passes
+ * through; a bare object key is joined onto ASSET_BASE_URL. Same logic as
+ * {@link resolveIconUrl}, named for non-icon callers.
+ */
+export const resolveAssetUrl = resolveIconUrl;

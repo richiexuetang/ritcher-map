@@ -2,11 +2,12 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getMarkers, type CatalogMarker } from '@/lib/api/maps';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { LoginForm } from '@/lib/auth/LoginForm';
 import { resolveIconUrl } from '@/lib/icons';
+import { MarkerBody } from '@/lib/markdown/MarkerBody';
 import { CategoryIcon } from '@/lib/panels/CategoryIcon';
 import { CategoryPanel } from '@/lib/panels/CategoryPanel';
 import { useProgressSync } from '@/lib/progress/useProgressSync';
@@ -100,6 +101,22 @@ export function MapScreen({
     setSelectedId(m.id);
     setFocus({ x: m.x, y: m.y, key: Date.now() });
   };
+
+  // A `[label](#marker-<id>)` reference inside a description: select + fly to it
+  // (which swaps the detail panel to that marker). No-op if it isn't loaded.
+  const onMarkerLink = useCallback(
+    (id: number) => {
+      const m = markerById.get(id);
+      if (!m) return;
+      setSelectedId(id);
+      setFocus({ x: m.x, y: m.y, key: Date.now() });
+    },
+    [markerById],
+  );
+  const resolveMarkerLabel = useCallback(
+    (id: number) => markerById.get(id)?.title ?? null,
+    [markerById],
+  );
 
   const catFilter = selectedCats.size > 0 ? [...selectedCats] : null;
   const selected = selectedId === null ? null : (markerById.get(selectedId) ?? null);
@@ -256,7 +273,13 @@ export function MapScreen({
             {selected.title ?? `Marker #${selected.id}`}
           </h2>
           {selected.description && (
-            <p className="rm-detail-desc">{selected.description}</p>
+            <div className="rm-detail-desc">
+              <MarkerBody
+                markdown={selected.description}
+                onMarkerLink={onMarkerLink}
+                resolveMarkerLabel={resolveMarkerLabel}
+              />
+            </div>
           )}
           {authed ? (
             <label className="rm-cat-row rm-detail-found">

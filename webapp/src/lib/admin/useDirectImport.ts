@@ -159,6 +159,9 @@ export function useDirectImport(
         width,
         height,
         maxZoom: plan.maxZoom,
+        // Lowest pyramid level present — so the viewer won't request tiles
+        // below it (was the "non-zero-based" blank-tiles caveat).
+        minZoom: plan.levels[0].z,
         tileSize,
         format: outFmt,
       });

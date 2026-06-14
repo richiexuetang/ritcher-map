@@ -58,6 +58,10 @@ public class GameMap {
     @Column(name = "max_zoom")
     private Integer maxZoom;
 
+    /** Lowest zoom the viewer exposes; 0 unless set by import or an editor. */
+    @Column(name = "min_zoom", nullable = false)
+    private int minZoom = 0;
+
     @Column(name = "tile_size", nullable = false)
     private int tileSize = 256;
 
@@ -96,6 +100,11 @@ public class GameMap {
         this.status = MapStatus.FAILED;
     }
 
+    /** Set the minimum zoom (config field; callers clamp to [0, maxZoom]). */
+    public void setMinZoom(int minZoom) {
+        this.minZoom = minZoom;
+    }
+
     public void markUploaded(String sourceObjectKey) {
         this.sourceObjectKey = sourceObjectKey;
         this.status = MapStatus.UPLOADED;
@@ -112,6 +121,7 @@ public class GameMap {
     public Long getWidth() { return width; }
     public Long getHeight() { return height; }
     public Integer getMaxZoom() { return maxZoom; }
+    public int getMinZoom() { return minZoom; }
     public int getTileSize() { return tileSize; }
     public String getFormat() { return format; }
     public Instant getCreatedAt() { return createdAt; }

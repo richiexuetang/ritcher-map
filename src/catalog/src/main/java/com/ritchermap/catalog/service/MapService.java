@@ -64,12 +64,25 @@ public class MapService {
         return maps.findById(id).orElseThrow(() -> NotFoundException.of("map", id));
     }
 
+    /** Editor edit: apply whichever of name / minZoom is provided. minZoom is
+     *  clamped to [0, maxZoom] (when the map is tiled) so it can't exceed the
+     *  top level. */
     @Transactional
-    public GameMap rename(long id, String name) {
+    public GameMap update(long id, String name, Integer minZoom) {
         GameMap m = get(id);
-        m.rename(name);
+        if (name != null && !name.isBlank()) {
+            m.rename(name.strip());
+        }
+        if (minZoom != null) {
+            m.setMinZoom(clampMinZoom(minZoom, m.getMaxZoom()));
+        }
         springEvents.publishEvent(mapChanged(id, CatalogChanged.Action.ACTION_UPDATED));
         return m;
+    }
+
+    private static int clampMinZoom(int minZoom, Integer maxZoom) {
+        int hi = maxZoom != null ? maxZoom : minZoom;
+        return Math.max(0, Math.min(minZoom, hi));
     }
 
     @Transactional
@@ -116,11 +129,13 @@ public class MapService {
      */
     @Transactional
     public GameMap markImported(long id, long width, long height, int maxZoom,
-                                int tileSize, String format) {
+                                int minZoom, int tileSize, String format) {
         GameMap m = get(id);
         m.markReady(width, height, maxZoom, tileSize, format);
+        m.setMinZoom(clampMinZoom(minZoom, maxZoom));
         springEvents.publishEvent(mapChanged(id, CatalogChanged.Action.ACTION_UPDATED));
-        log.info("map id={} marked imported: {}x{} z0..{} format={}", id, width, height, maxZoom, format);
+        log.info("map id={} marked imported: {}x{} z{}..{} format={}",
+                id, width, height, m.getMinZoom(), maxZoom, format);
         return m;
     }
 

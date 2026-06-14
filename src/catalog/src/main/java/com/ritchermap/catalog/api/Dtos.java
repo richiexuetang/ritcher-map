@@ -33,7 +33,11 @@ public final class Dtos {
             @NotBlank @Size(max = 200) String name
     ) {}
 
-    public record RenameMapRequest(@NotBlank @Size(max = 200) String name) {}
+    /** Editor edit: both fields optional — only the present ones are applied. */
+    public record UpdateMapRequest(
+            @Size(max = 200) String name,
+            @PositiveOrZero Integer minZoom
+    ) {}
 
     public record RequestTilingRequest(
             @NotBlank String sourceBucket,
@@ -50,8 +54,9 @@ public final class Dtos {
             @NotNull @Positive Long width,
             @NotNull @Positive Long height,
             @NotNull @PositiveOrZero Integer maxZoom,
-            @Positive Integer tileSize,   // optional; defaults to 256
-            String format                 // optional; defaults to webp
+            @PositiveOrZero Integer minZoom,   // optional; defaults to 0
+            @Positive Integer tileSize,        // optional; defaults to 256
+            String format                      // optional; defaults to webp
     ) {}
 
     public record MapResponse(
@@ -64,6 +69,7 @@ public final class Dtos {
             Long width,
             Long height,
             Integer maxZoom,
+            int minZoom,
             int tileSize,
             String format,
             Instant createdAt,
@@ -73,7 +79,7 @@ public final class Dtos {
             return new MapResponse(
                     m.getId(), m.getGameSlug(), m.getMapSlug(), m.getName(), m.getPrefix(),
                     m.getStatus(), m.getWidth(), m.getHeight(), m.getMaxZoom(),
-                    m.getTileSize(), m.getFormat(), m.getCreatedAt(), m.getUpdatedAt()
+                    m.getMinZoom(), m.getTileSize(), m.getFormat(), m.getCreatedAt(), m.getUpdatedAt()
             );
         }
     }
@@ -107,7 +113,8 @@ public final class Dtos {
             @NotNull Double x,
             @NotNull Double y,
             @Size(max = 200) String title,
-            @Size(max = 4000) String description
+            // Markdown body (rich text + image/video embeds); generous cap.
+            @Size(max = 50000) String description
     ) {}
 
     public record MarkerResponse(

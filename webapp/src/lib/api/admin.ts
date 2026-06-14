@@ -37,8 +37,12 @@ export function createMap(
   );
 }
 
-export function renameMap(id: number, name: string): Promise<MapResponse> {
-  return apiSend<MapResponse>('PATCH', `/api/v1/maps/${id}`, { name }, { auth: true });
+/** Patch a map's editable fields (name and/or minZoom). */
+export function updateMap(
+  id: number,
+  patch: { name?: string; minZoom?: number },
+): Promise<MapResponse> {
+  return apiSend<MapResponse>('PATCH', `/api/v1/maps/${id}`, patch, { auth: true });
 }
 
 export function deleteMap(id: number): Promise<void> {
@@ -64,6 +68,7 @@ export interface ImportedDims {
   width: number;
   height: number;
   maxZoom: number;
+  minZoom?: number;
   tileSize?: number;
   format?: string;
 }
@@ -185,8 +190,16 @@ async function presignFetch<T>(payload: unknown): Promise<T> {
   return body as T;
 }
 
-export function presignUpload(filename: string): Promise<PresignedUpload> {
-  return presignFetch<PresignedUpload>({ filename });
+/**
+ * Sign a PUT for a single file. `target: 'tiles'` puts it in the PUBLIC bucket
+ * under `media/…` (browser-served marker media / icons); the default 'uploads'
+ * is the private source-image bucket the tiler reads.
+ */
+export function presignUpload(
+  filename: string,
+  target: 'uploads' | 'tiles' = 'uploads',
+): Promise<PresignedUpload> {
+  return presignFetch<PresignedUpload>({ filename, target });
 }
 
 export interface PresignedKey {
