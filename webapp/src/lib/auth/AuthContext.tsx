@@ -74,7 +74,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser({
         id: me.id,
         email: me.email,
-        premium: me.premium,
         admin: me.admin === true,
       });
     } catch (err) {
@@ -106,7 +105,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setUser({
             id: me.id,
             email: me.email,
-            premium: me.premium,
             admin: me.admin === true,
           });
         }

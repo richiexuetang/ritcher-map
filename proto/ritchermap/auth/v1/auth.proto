@@ -14,13 +14,11 @@ option java_multiple_files = true;
 // service maps it to/from the JWT payload. It replaces the
 // contract-by-convention that previously lived only in comments in
 // JwtService.rb and gateway/internal/auth.
-//
-// The `premium` claim closes the premium-enforcement gap: the gateway can gate
-// free-tier tracking limits from the token, without a synchronous call back to
-// accounts on every progress write.
 message SessionClaims {
   string sub = 1;     // user id (UUID string)
   int64 exp = 2;      // expiry, unix seconds (gateway requires this)
   int64 iat = 3;      // issued-at, unix seconds
-  bool premium = 4;   // subscription tier flag, resolved by accounts at login
+
+  reserved 4;            // was `premium` (billing removed)
+  reserved "premium";
 }

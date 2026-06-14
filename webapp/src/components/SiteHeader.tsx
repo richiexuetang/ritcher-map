@@ -23,7 +23,6 @@ export function SiteHeader() {
                 Admin
               </Link>
             )}
-            {user?.premium && <span className="rm-premium-badge">Premium</span>}
             <Link href="/account" className="rm-user-email">
               {user?.email ?? 'Account'}
             </Link>

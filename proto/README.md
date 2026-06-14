@@ -93,8 +93,8 @@ files — adopt the generated types first, switch the wire second.
 2. `catalog/Events.java` records → generated `com.ritchermap.proto.*` classes.
 3. Python worker dict payloads → generated message classes.
 4. Rust `CatalogChanged` JSON struct → generated prost type.
-5. `SessionClaims` — accounts encodes the JWT from these field names (adding
-   `premium`); gateway decodes into the generated struct and gates free-tier
-   limits on `premium`. **This closes the premium-enforcement gap.**
+5. `SessionClaims` — accounts encodes the JWT from these field names; gateway
+   decodes the `sub`/`exp`/`iat`/`admin` claims. (Field 4 `premium` was removed
+   along with billing.)
 6. `ProgressUpdate.marker_id` is `int64` — update the gateway's progress store/
    handler to carry int64 rather than string. **This resolves the type drift.**

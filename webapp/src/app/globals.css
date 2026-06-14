@@ -623,18 +623,6 @@ a.rm-map-card:hover {
   color: var(--rm-text);
 }
 
-.rm-premium-badge {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #f5c542, #f59e0b);
-  color: #1a1206;
-  flex: 0 0 auto;
-}
-
 /* --- Marker detail card ----------------------------------------------------------- */
 
 .rm-detail {
