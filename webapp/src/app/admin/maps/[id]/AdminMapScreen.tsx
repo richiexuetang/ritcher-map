@@ -24,7 +24,8 @@ import {
   getMarkers,
   type CatalogMarker,
 } from '@/lib/api/maps';
-import { categoryColor } from '@/lib/map/layers';
+import { resolveIconUrl } from '@/lib/icons';
+import { CategoryIcon } from '@/lib/panels/CategoryIcon';
 import type { CategoryResponse, MapResponse } from '@/lib/types';
 
 const MapView = dynamic(() => import('@/lib/map/MapView'), { ssr: false });
@@ -151,6 +152,30 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
   const [catIcon, setCatIcon] = useState('');
   const [catSort, setCatSort] = useState('0');
   const [catParent, setCatParent] = useState('');
+  const [iconUploading, setIconUploading] = useState(false);
+
+  // Upload an icon image to R2 and drop its public URL into the icon field.
+  // Reuses the same presign flow as map images.
+  const onPickIcon = async (file: File | undefined) => {
+    if (!file) return;
+    setError(null);
+    setIconUploading(true);
+    try {
+      const grant = await presignUpload(file.name);
+      await uploadToPresignedUrl(grant.url, file);
+      const url = resolveIconUrl(grant.key);
+      setCatIcon(url ?? grant.key);
+      if (!url) {
+        setError(
+          'Icon uploaded, but NEXT_PUBLIC_ASSET_BASE_URL is unset — paste a public URL for the object, or configure the asset base so keys resolve.',
+        );
+      }
+    } catch (e) {
+      setError(errMsg(e, 'icon upload failed'));
+    } finally {
+      setIconUploading(false);
+    }
+  };
 
   const catFormReset = () => {
     setCatEditing(null);
@@ -214,6 +239,14 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
     () => new Map(markers.map((m) => [m.id, m])),
     [markers],
   );
+  const categoryIcons = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const c of categories) {
+      const url = resolveIconUrl(c.icon);
+      if (url) m.set(c.id, url);
+    }
+    return m;
+  }, [categories]);
 
   const selectNew = useCallback(
     (p: { x: number; y: number }) => {
@@ -351,6 +384,7 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                     onMarkerClick={selectExisting}
                     onMapClick={selectNew}
                     markersVersion={markersVersion}
+                    categoryIcons={categoryIcons}
                   />
                 </div>
               </>
@@ -539,11 +573,7 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                   {categories.map((c) => (
                     <tr key={c.id}>
                       <td>
-                        <span
-                          className="rm-swatch"
-                          style={{ background: categoryColor(c.id) }}
-                          aria-hidden="true"
-                        />
+                        <CategoryIcon icon={c.icon} categoryId={c.id} size={16} />
                       </td>
                       <td>
                         {c.parentId !== null && '↳ '}
@@ -593,12 +623,29 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                 />
               </div>
               <div className="rm-admin-form-row">
+                <CategoryIcon
+                  icon={catIcon.trim() === '' ? null : catIcon.trim()}
+                  categoryId={catEditing?.id ?? 0}
+                  size={20}
+                />
                 <input
                   className="rm-input"
-                  placeholder="icon (optional)"
+                  placeholder="icon URL / key (optional)"
                   value={catIcon}
                   onChange={(e) => setCatIcon(e.target.value)}
                 />
+                <label className="rm-btn">
+                  {iconUploading ? 'Uploading…' : 'Upload'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    disabled={iconUploading}
+                    onChange={(e) => onPickIcon(e.target.files?.[0])}
+                  />
+                </label>
+              </div>
+              <div className="rm-admin-form-row">
                 <input
                   className="rm-input"
                   placeholder="sort"

@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { getMarkers, type CatalogMarker } from '@/lib/api/maps';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { LoginForm } from '@/lib/auth/LoginForm';
-import { categoryColor } from '@/lib/map/layers';
+import { resolveIconUrl } from '@/lib/icons';
+import { CategoryIcon } from '@/lib/panels/CategoryIcon';
 import { CategoryPanel } from '@/lib/panels/CategoryPanel';
 import { useProgressSync } from '@/lib/progress/useProgressSync';
 import type { CategoryResponse, MapResponse } from '@/lib/types';
@@ -68,6 +69,16 @@ export function MapScreen({
     () => new Map(categories.map((c) => [c.id, c])),
     [categories],
   );
+  // categoryId -> resolved icon URL, for the map's symbol layer. Only
+  // categories with a usable icon appear; the rest stay colored circles.
+  const categoryIcons = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const c of categories) {
+      const url = resolveIconUrl(c.icon);
+      if (url) m.set(c.id, url);
+    }
+    return m;
+  }, [categories]);
 
   const results = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -104,6 +115,7 @@ export function MapScreen({
           hideFound={hideFound}
           onMarkerClick={setSelectedId}
           focus={focus}
+          categoryIcons={categoryIcons}
         />
       </div>
 
@@ -154,10 +166,9 @@ export function MapScreen({
                     className="rm-search-row"
                     onClick={() => jumpTo(m)}
                   >
-                    <span
-                      className="rm-swatch"
-                      style={{ background: categoryColor(m.categoryId) }}
-                      aria-hidden="true"
+                    <CategoryIcon
+                      icon={categoryById.get(m.categoryId)?.icon ?? null}
+                      categoryId={m.categoryId}
                     />
                     <span className="rm-cat-name">
                       {m.title ?? `Marker #${m.id}`}
@@ -237,10 +248,10 @@ export function MapScreen({
             ×
           </button>
           <div className="rm-detail-category">
-            <span
-              className="rm-swatch"
-              style={{ background: categoryColor(selected.categoryId) }}
-              aria-hidden="true"
+            <CategoryIcon
+              icon={categoryById.get(selected.categoryId)?.icon ?? null}
+              categoryId={selected.categoryId}
+              size={16}
             />
             {categoryById.get(selected.categoryId)?.name ?? 'Marker'}
           </div>
