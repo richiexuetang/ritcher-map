@@ -37,8 +37,12 @@ export function createMap(
   );
 }
 
-export function renameMap(id: number, name: string): Promise<MapResponse> {
-  return apiSend<MapResponse>('PATCH', `/api/v1/maps/${id}`, { name }, { auth: true });
+/** Patch a map's editable fields (name and/or minZoom). */
+export function updateMap(
+  id: number,
+  patch: { name?: string; minZoom?: number },
+): Promise<MapResponse> {
+  return apiSend<MapResponse>('PATCH', `/api/v1/maps/${id}`, patch, { auth: true });
 }
 
 export function deleteMap(id: number): Promise<void> {
@@ -64,6 +68,7 @@ export interface ImportedDims {
   width: number;
   height: number;
   maxZoom: number;
+  minZoom?: number;
   tileSize?: number;
   format?: string;
 }

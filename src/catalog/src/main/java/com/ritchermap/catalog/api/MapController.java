@@ -36,8 +36,8 @@ public class MapController {
     }
 
     @PatchMapping("/{id}")
-    public Dtos.MapResponse rename(@PathVariable long id, @Valid @RequestBody Dtos.RenameMapRequest req) {
-        return Dtos.MapResponse.from(maps.rename(id, req.name()));
+    public Dtos.MapResponse update(@PathVariable long id, @Valid @RequestBody Dtos.UpdateMapRequest req) {
+        return Dtos.MapResponse.from(maps.update(id, req.name(), req.minZoom()));
     }
 
     @DeleteMapping("/{id}")
@@ -70,6 +70,7 @@ public class MapController {
         return Dtos.MapResponse.from(
                 maps.markImported(
                         id, req.width(), req.height(), req.maxZoom(),
+                        req.minZoom() != null ? req.minZoom() : 0,
                         req.tileSize() != null ? req.tileSize() : 256,
                         req.format() != null ? req.format() : "webp")
         );

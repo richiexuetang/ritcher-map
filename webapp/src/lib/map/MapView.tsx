@@ -100,7 +100,7 @@ function buildStyle(meta: MapResponse): StyleSpecification {
         tiles: [tileTemplateUrl(meta.prefix, meta.format)],
         tileSize: TILE_SIZE,
         scheme: 'xyz',
-        minzoom: 0,
+        minzoom: meta.minZoom ?? 0,
         maxzoom: maxZoom,
         bounds,
       },
@@ -171,6 +171,7 @@ export const MapView: React.FC<MapViewProps> = ({
       style: buildStyle(meta),
       maxBounds: bounds,
       bounds,
+      minZoom: meta.minZoom ?? 0,
       maxZoom,
       attributionControl: false,
     });

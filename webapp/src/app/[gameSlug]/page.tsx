@@ -51,7 +51,7 @@ export default async function GamePage({ params }: Props) {
                 <span className={statusClass(m)}>{m.status}</span>
                 {m.width !== null && m.height !== null && (
                   <span className="rm-map-card-sub">
-                    {m.width} × {m.height}px · zoom 0–{m.maxZoom}
+                    {m.width} × {m.height}px · zoom {m.minZoom ?? 0}–{m.maxZoom}
                   </span>
                 )}
               </Link>

@@ -268,17 +268,16 @@ export default function StitchPage() {
           <div className="rm-panel-title">2 · Import directly (recommended)</div>
           <p className="rm-admin-dim">
             Upload all {importPlan.total} tiles across {importPlan.levels.length}{' '}
-            level(s) (z0–z{importPlan.maxZoom}) to the target map&apos;s tile
-            storage, then mark it READY. No image is assembled, so there is no
-            canvas-size limit. JPEG tiles are converted to WebP; partial edge
-            tiles are padded to square.
+            level(s) (z{importPlan.levels[0].z}–z{importPlan.maxZoom}) to the
+            target map&apos;s tile storage, then mark it READY. No image is
+            assembled, so there is no canvas-size limit. JPEG tiles are converted
+            to WebP; partial edge tiles are padded to square.
             {!importPlan.zeroBased && (
               <>
                 {' '}
-                <strong>
-                  ⚠ lowest level is z{importPlan.levels[0].z}, not z0 —
-                  zoomed-out tiles will be blank until lower levels exist.
-                </strong>
+                The map&apos;s min zoom is set to z{importPlan.levels[0].z} (the
+                lowest level present), so the viewer won&apos;t request lower
+                tiles.
               </>
             )}
           </p>

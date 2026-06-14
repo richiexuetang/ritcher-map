@@ -11,8 +11,8 @@ import {
   deleteMap,
   deleteMarker,
   presignUpload,
-  renameMap,
   requestTiling,
+  updateMap,
   updateCategory,
   updateMarker,
   uploadToPresignedUrl,
@@ -85,18 +85,36 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
     return () => clearInterval(t);
   }, [status, mapId]);
 
-  // --- rename / delete ---------------------------------------------------------
+  // --- rename / min zoom / delete ----------------------------------------------
   const [nameDraft, setNameDraft] = useState('');
+  const [minZoomDraft, setMinZoomDraft] = useState('0');
   useEffect(() => {
-    if (meta) setNameDraft(meta.name);
+    if (meta) {
+      setNameDraft(meta.name);
+      setMinZoomDraft(String(meta.minZoom));
+    }
   }, [meta]);
 
   const saveRename = async () => {
     if (!meta || nameDraft.trim() === '' || nameDraft === meta.name) return;
     try {
-      setMeta(await renameMap(meta.id, nameDraft.trim()));
+      setMeta(await updateMap(meta.id, { name: nameDraft.trim() }));
     } catch (e) {
       setError(errMsg(e, 'rename failed'));
+    }
+  };
+
+  const saveMinZoom = async () => {
+    if (!meta) return;
+    const z = Number(minZoomDraft);
+    if (!Number.isInteger(z) || z < 0) {
+      setError('Min zoom must be a non-negative integer.');
+      return;
+    }
+    try {
+      setMeta(await updateMap(meta.id, { minZoom: z }));
+    } catch (e) {
+      setError(errMsg(e, 'min zoom update failed'));
     }
   };
 
@@ -491,6 +509,24 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                 Rename
               </button>
             </div>
+            <div className="rm-admin-form-row">
+              <label className="rm-admin-dim" htmlFor="rm-min-zoom">
+                Min zoom
+              </label>
+              <input
+                id="rm-min-zoom"
+                className="rm-input"
+                type="number"
+                min={0}
+                max={meta.maxZoom ?? undefined}
+                value={minZoomDraft}
+                onChange={(e) => setMinZoomDraft(e.target.value)}
+                style={{ maxWidth: 80 }}
+              />
+              <button type="button" className="rm-btn" onClick={saveMinZoom}>
+                Set
+              </button>
+            </div>
             <div className="rm-admin-dim">
               {meta.prefix} ·{' '}
               <span
@@ -499,7 +535,7 @@ export function AdminMapScreen({ mapId }: { mapId: number }) {
                 {meta.status}
               </span>
               {meta.width !== null && meta.height !== null && (
-                <> · {meta.width}×{meta.height} · z0–{meta.maxZoom}</>
+                <> · {meta.width}×{meta.height} · z{meta.minZoom}–{meta.maxZoom}</>
               )}
               {' · '}
               {markers.length} markers
