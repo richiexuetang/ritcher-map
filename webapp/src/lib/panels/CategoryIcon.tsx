@@ -12,11 +12,15 @@ export interface CategoryIconProps {
   alt?: string;
 }
 
+/** Built-in white glyph-only SVGs live here and render as a tinted pin. */
+const BUILTIN_ICON_PREFIX = '/icons/categories/';
+
 /**
- * A category's visual marker: its uploaded icon image when one resolves,
- * otherwise the deterministic color swatch. If the image fails to load
- * (404 / CORS / bad URL) it falls back to the swatch too, so a broken icon
- * never leaves a blank gap.
+ * A category's visual marker. For a built-in glyph it mirrors the map: a
+ * category-colored disc with the white glyph on top (the glyph SVG is white, so
+ * we mask it). A custom uploaded icon (possibly full-color) renders as a plain
+ * image. Anything missing/broken falls back to the deterministic color swatch,
+ * so a bad icon never leaves a blank gap.
  */
 export const CategoryIcon: React.FC<CategoryIconProps> = ({
   icon,
@@ -31,6 +35,25 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({
   useEffect(() => {
     setFailed(false);
   }, [url]);
+
+  const color = categoryColor(categoryId);
+
+  if (url && url.startsWith(BUILTIN_ICON_PREFIX)) {
+    return (
+      <span
+        className="cat-pin"
+        style={{ background: color, width: size, height: size }}
+        aria-hidden={alt === '' ? true : undefined}
+        aria-label={alt || undefined}
+        role={alt ? 'img' : undefined}
+      >
+        <span
+          className="cat-pin-glyph"
+          style={{ maskImage: `url("${url}")`, WebkitMaskImage: `url("${url}")` }}
+        />
+      </span>
+    );
+  }
 
   if (url && !failed) {
     return (
@@ -49,7 +72,7 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({
   return (
     <span
       className="swatch"
-      style={{ background: categoryColor(categoryId), width: size, height: size }}
+      style={{ background: color, width: size, height: size }}
       aria-hidden="true"
     />
   );
