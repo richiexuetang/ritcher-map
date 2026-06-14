@@ -4,7 +4,7 @@
 # `CREATE EXTENSION postgis`), so this image only needs PostGIS *available*. The
 # base image already enables the extension in POSTGRES_DB; the init script below
 # is an explicit, idempotent safety net (e.g. for custom DB names).
-FROM postgis/postgis:16-3.4
+FROM postgis/postgis:17-3.5
 
 # Anything in this dir runs once, on first init of an empty data directory.
 COPY db/init/ /docker-entrypoint-initdb.d/
