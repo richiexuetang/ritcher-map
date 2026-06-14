@@ -8,6 +8,16 @@ const rawGateway =
 export const GATEWAY_URL: string = rawGateway.replace(/\/+$/, '');
 
 /**
+ * Public origin the site is served from, e.g. 'https://ritchermap.com'. Used as
+ * the `metadataBase` for absolute canonical/Open Graph URLs and to build the
+ * sitemap + robots.txt. MUST be set in production (set NEXT_PUBLIC_SITE_URL to
+ * your real domain) or Google will index localhost URLs. Trailing slash stripped.
+ */
+export const SITE_URL: string = (
+  process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+).replace(/\/+$/, '');
+
+/**
  * Public base URL for uploaded assets (category icons) held in object storage,
  * e.g. 'https://assets.example.com' or an r2.dev bucket URL. When unset, only
  * absolute icon URLs render; a bare object key can't be resolved to a fetch
